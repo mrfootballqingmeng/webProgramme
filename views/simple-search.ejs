@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>搜索 - NTU NEST</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .search-page { max-width: 600px; margin: 20px auto; padding: 20px; }
+    .search-box { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+    .search-input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; }
+    .search-btn { padding: 12px 24px; background: #1da1f2; color: white; border: none; border-radius: 8px; margin-left: 10px; cursor: pointer; }
+    .result-item { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #1da1f2; }
+    .result-meta { font-size: 14px; color: #666; margin-bottom: 8px; }
+    .highlight { background: yellow; padding: 2px; }
+    .no-results { text-align: center; color: #666; padding: 40px; }
+    .back-link { color: #1da1f2; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+  </style>
+</head>
+<body>
+<div class="search-page">
+  <a href="/home" class="back-link">← 返回首页</a>
+  
+  <div class="search-box">
+    <h2>搜索帖子</h2>
+    <form method="GET" style="display: flex;">
+      <input type="text" name="q" value="<%= query %>" placeholder="输入关键词搜索帖子或用户..." class="search-input" autofocus>
+      <button type="submit" class="search-btn">搜索</button>
+    </form>
+  </div>
+
+  <% if (query) { %>
+    <h3>搜索结果 (<%= posts.length %> 条)</h3>
+    
+    <% if (posts.length > 0) { %>
+      <% posts.forEach(post => { %>
+        <div class="result-item">
+          <div class="result-meta">
+            <strong>@<%= post.username %></strong> · 
+            <%= post.topic_name %> · 
+            <%= new Date(post.created_at).toLocaleDateString() %>
+          </div>
+          <div>
+            <%- post.content.replace(new RegExp(`(${query})`, 'gi'), '<span class="highlight">$1</span>') %>
+          </div>
+          <% if (post.media_paths) { %>
+            <% try { %>
+              <% const files = JSON.parse(post.media_paths); %>
+              <% if (files.length > 0) { %>
+                <div style="margin-top: 10px;">
+                  <% files.forEach(file => { %>
+                    <img src="<%= file %>" style="max-width: 100px; max-height: 100px; margin: 5px; border-radius: 4px;" onerror="this.style.display='none'">
+                  <% }) %>
+                </div>
+              <% } %>
+            <% } catch(e) { %>
+              <% if (post.media_path) { %>
+                <img src="<%= post.media_path %>" style="max-width: 100px; max-height: 100px; margin: 5px; border-radius: 4px;" onerror="this.style.display='none'">
+              <% } %>
+            <% } %>
+          <% } %>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div class="no-results">
+        <p>没有找到相关结果</p>
+        <p>试试其他关键词吧</p>
+      </div>
+    <% } %>
+  <% } else { %>
+    <div class="no-results">
+      <p>输入关键词开始搜索</p>
+    </div>
+  <% } %>
+</div>
+</body>
+</html>

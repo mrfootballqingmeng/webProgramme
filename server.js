@@ -407,6 +407,90 @@ app.get('/api/posts', (req, res) => {
   });
 });
 
+// ========== 搜索API ==========
+app.get('/api/search', (req, res) => {
+  const query = req.query.q || '';
+  const topic = req.query.topic || null;
+
+  if (!query.trim()) {
+    return res.json({ posts: [], total: 0 });
+  }
+
+  const params = [`%${query}%`, `%${query}%`];
+  let sql = `SELECT posts.*, users.username, topics.display_name AS topic_name,
+    (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) AS likes_count,
+    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id) AS comments_count,
+    (SELECT COUNT(*) FROM shares WHERE shares.post_id = posts.id) AS shares_count
+    FROM posts
+    JOIN users ON posts.user_id = users.id
+    JOIN topics ON posts.topic_id = topics.id
+    WHERE (posts.content LIKE ? OR users.username LIKE ?)`;
+
+  if (topic) {
+    sql += ' AND posts.topic_id = (SELECT id FROM topics WHERE name = ? LIMIT 1)';
+    params.push(topic);
+  }
+
+  sql += ' ORDER BY posts.created_at DESC LIMIT 50';
+
+  db.query(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    const mapped = (rows||[]).map(p => ({
+      id: p.id,
+      user: { id: p.user_id, name: p.username },
+      content: p.content,
+      topic_name: p.topic_name,
+      files: p.media_paths ? (()=>{ try{return JSON.parse(p.media_paths);}catch(e){return p.media_path? [p.media_path]:[];} })() : (p.media_path? [p.media_path]:[]),
+      createdAt: p.created_at,
+      likes: p.likes_count||0,
+      comments: p.comments_count||0,
+      shares: p.shares_count||0
+    }));
+    res.json({ posts: mapped, total: mapped.length });
+  });
+});
+
+// ========== 搜索建议API ==========
+app.get('/api/search/suggestions', (req, res) => {
+  const query = req.query.q || '';
+
+  if (!query.trim() || query.length < 2) {
+    return res.json({ suggestions: [] });
+  }
+
+  const params = [`%${query}%`];
+  const sql = `
+    SELECT DISTINCT
+      SUBSTRING(content, 1, 50) as suggestion,
+      'post' as type
+    FROM posts
+    WHERE content LIKE ?
+    LIMIT 5
+
+    UNION
+
+    SELECT DISTINCT
+      username as suggestion,
+      'user' as type
+    FROM users
+    WHERE username LIKE ?
+    LIMIT 3
+  `;
+
+  params.push(`%${query}%`);
+
+  db.query(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+
+    const suggestions = (rows || []).map(row => ({
+      text: row.suggestion,
+      type: row.type
+    }));
+
+    res.json({ suggestions });
+  });
+});
+
 app.post('/api/posts', upload.array('files'), (req, res) => {
   if (!req.session.user) return res.status(401).json({ error: 'Login required' });
   const content = req.body.content || '';
@@ -480,6 +564,28 @@ app.post('/api/posts/:id/share', (req, res) => {
   });
 });
 
+// ========== 简单搜索 ==========
+app.get("/search", (req, res) => {
+  if (!req.session.user) return res.redirect("/");
+  const query = req.query.q || '';
+
+  if (!query.trim()) {
+    return res.render('simple-search', { user: req.session.user, posts: [], query: '' });
+  }
+
+  const sql = `SELECT posts.*, users.username, topics.display_name AS topic_name
+    FROM posts
+    JOIN users ON posts.user_id = users.id
+    JOIN topics ON posts.topic_id = topics.id
+    WHERE posts.content LIKE ? OR users.username LIKE ?
+    ORDER BY posts.created_at DESC LIMIT 20`;
+
+  db.query(sql, [`%${query}%`, `%${query}%`], (err, posts) => {
+    if (err) return res.status(500).send('搜索失败');
+    res.render('simple-search', { user: req.session.user, posts: posts || [], query });
+  });
+});
+
 // ========== 主页 ==========
 app.get("/home", (req, res) => {
   if (!req.session.user) return res.redirect("/");
@@ -528,6 +634,72 @@ app.get("/topics", (req, res) => {
   db.query("SELECT * FROM topics", (err, topics) => {
     if (err) throw err;
     res.render("topics", { user: req.session.user, topics: topics || [] });
+  });
+});
+
+// ========== 搜索页面 ==========
+app.get("/search", (req, res) => {
+  if (!req.session.user) return res.redirect("/");
+  const query = req.query.q || '';
+  const topic = req.query.topic || null;
+
+  // 获取所有话题用于筛选
+  db.query('SELECT * FROM topics', (tErr, topics) => {
+    if (tErr) return res.status(500).send('数据库错误');
+
+    if (!query.trim()) {
+      return res.render('search', {
+        user: req.session.user,
+        topics: topics || [],
+        posts: [],
+        query: '',
+        selectedTopic: topic,
+        total: 0
+      });
+    }
+
+    const params = [`%${query}%`, `%${query}%`];
+    let sql = `SELECT posts.*, users.username, topics.display_name AS topic_name,
+      (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) AS likes_count,
+      (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id) AS comments_count,
+      (SELECT COUNT(*) FROM shares WHERE shares.post_id = posts.id) AS shares_count
+      FROM posts
+      JOIN users ON posts.user_id = users.id
+      JOIN topics ON posts.topic_id = topics.id
+      WHERE (posts.content LIKE ? OR users.username LIKE ?)`;
+
+    if (topic) {
+      sql += ' AND posts.topic_id = (SELECT id FROM topics WHERE name = ? LIMIT 1)';
+      params.push(topic);
+    }
+
+    sql += ' ORDER BY posts.created_at DESC LIMIT 50';
+
+    db.query(sql, params, (err, posts) => {
+      if (err) return res.status(500).send('数据库错误');
+
+      const mapped = (posts||[]).map(p => ({
+        id: p.id,
+        user_id: p.user_id,
+        username: p.username,
+        topic_name: p.topic_name,
+        content: p.content,
+        files: p.media_paths ? (()=>{ try{return JSON.parse(p.media_paths);}catch(e){ return p.media_path? [p.media_path]:[]; } })() : (p.media_path? [p.media_path]:[]),
+        created_at: p.created_at,
+        likes: p.likes_count||0,
+        comments: p.comments_count||0,
+        shares: p.shares_count||0
+      }));
+
+      res.render('search', {
+        user: req.session.user,
+        topics: topics || [],
+        posts: mapped,
+        query: query,
+        selectedTopic: topic,
+        total: mapped.length
+      });
+    });
   });
 });
 

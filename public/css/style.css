@@ -273,3 +273,133 @@ body {
 .quick-link:hover {
   background: #e0e0e0;
 }
+
+/* 搜索页面样式 */
+.search-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.search-form {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.search-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1da1f2;
+}
+
+.search-btn {
+  padding: 12px 24px;
+  background: #1da1f2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.search-btn:hover {
+  background: #1991db;
+}
+
+.filter-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.topic-filter {
+  padding: 8px 12px;
+  border: 1px solid #e1e8ed;
+  border-radius: 6px;
+  background: white;
+}
+
+.search-results {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.search-header {
+  padding: 20px;
+  border-bottom: 1px solid #e1e8ed;
+}
+
+.search-stats {
+  color: #657786;
+  font-size: 14px;
+}
+
+.highlight {
+  background-color: #fff3cd;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  color: #657786;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: #1da1f2;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+/* 快速搜索框样式 */
+.quick-search input:focus {
+  border-color: #1da1f2 !important;
+}
+
+.quick-search button:hover {
+  background: #1991db !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .sidebar-left, .sidebar-right {
+    display: none;
+  }
+
+  .search-input-group {
+    flex-direction: column;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
