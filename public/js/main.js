@@ -21,16 +21,59 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const previews = document.getElementById('weibo-previews') || document.querySelector('.image-previews');
 
   if (fileInput) {
+    // 用于存储当前选择的文件列表
+    let selectedFiles = [];
     fileInput.addEventListener('change', () => {
       if (!previews) return;
-      previews.innerHTML='';
-      Array.from(fileInput.files).slice(0,4).forEach(f=>{
-        const url = URL.createObjectURL(f);
-        const img = document.createElement('img');
-        img.src = url; img.style.width='70px'; img.style.height='70px'; img.style.objectFit='cover'; img.style.borderRadius='6px';
-        previews.appendChild(img);
-      });
+      selectedFiles = Array.from(fileInput.files).slice(0,4);
+      renderPreviews();
     });
+
+    function renderPreviews() {
+      previews.innerHTML = '';
+      selectedFiles.forEach((f, idx) => {
+        const url = URL.createObjectURL(f);
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'inline-block';
+        wrapper.style.position = 'relative';
+        wrapper.style.marginRight = '6px';
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.width = '70px';
+        img.style.height = '70px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '6px';
+        // 删除按钮
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '×';
+        delBtn.title = '移除';
+        delBtn.style.position = 'absolute';
+        delBtn.style.top = '0';
+        delBtn.style.right = '0';
+        delBtn.style.background = 'rgba(0,0,0,0.6)';
+        delBtn.style.color = '#fff';
+        delBtn.style.border = 'none';
+        delBtn.style.borderRadius = '50%';
+        delBtn.style.width = '20px';
+        delBtn.style.height = '20px';
+        delBtn.style.cursor = 'pointer';
+        delBtn.onclick = (e) => {
+          e.preventDefault();
+          selectedFiles.splice(idx, 1);
+          updateFileInput();
+          renderPreviews();
+        };
+        wrapper.appendChild(img);
+        wrapper.appendChild(delBtn);
+        previews.appendChild(wrapper);
+      });
+    }
+    // 用于同步 fileInput.files
+    function updateFileInput() {
+      const dt = new DataTransfer();
+      selectedFiles.forEach(f => dt.items.add(f));
+      fileInput.files = dt.files;
+    }
   }
 
   // 点赞 / 分享 / 评论交互 (home 模板更新后会有对应按钮 class)

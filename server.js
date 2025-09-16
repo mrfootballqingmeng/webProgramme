@@ -13,6 +13,13 @@ const { verifyMessage } = require('ethers');
 
 const app = express();
 const PORT = 3001;
+// 启动时自动创建 uploads 目录
+const fs = require('fs');
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('✔ 自动创建 uploads 目录');
+}
 
 
 // 配置 MySQL
@@ -528,8 +535,12 @@ app.get("/topics", (req, res) => {
 app.post("/home/post", upload.array("files"), (req, res) => {
   if (!req.session.user) return res.redirect("/");
   const { content, topic_id } = req.body;
-  if (!content || !topic_id) return res.send("❌ 请填写完整信息");
   const files = (req.files||[]).map(f=>'/uploads/'+f.filename);
+  // 只要内容或图片有其一即可
+  if ((!content || !content.trim()) && (!files || files.length === 0)) {
+    return res.send("❌ 请填写内容或至少上传一张图片");
+  }
+  if (!topic_id) return res.send("❌ 请选择话题");
   const mediaPathsJson = files.length ? JSON.stringify(files) : null;
   db.query(
     "INSERT INTO posts (user_id, topic_id, content, media_paths) VALUES (?, ?, ?, ?)",
