@@ -62,169 +62,22 @@
     .card a:hover {
       text-decoration: underline;
     }
-    .metamask-btn {
-      width: 100%;
-      padding: 12px;
-      margin-top: 12px;
-      background: #f6851b;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .metamask-btn:hover {
-      background: #e2761b;
-    }
-    .metamask-btn:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-    .divider {
-      margin: 20px 0;
-      text-align: center;
-      position: relative;
-    }
-    .divider::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: #ddd;
-    }
-    .divider span {
-      background: rgba(255, 255, 255, 0.9);
-      padding: 0 15px;
-      color: #666;
-      font-size: 14px;
-    }
   </style>
 </head>
 <body>
   <div class="card">
     <img src="/images/logo.jpg" alt="NTU NEST Logo">
     <h2>Login</h2>
-
-    <!-- MetaMask Login -->
-    <button id="metamaskBtn" class="metamask-btn" onclick="connectMetaMask()">
-      🦊 Connect with MetaMask
-    </button>
-
-    <div class="divider">
-      <span>OR</span>
-    </div>
-
-    <!-- Traditional Login -->
     <form action="/login" method="POST">
       <input type="text" name="username" placeholder="Enter your username" required>
       <input type="password" name="password" placeholder="Enter your password" required>
       <button type="submit">Sign in</button>
     </form>
     <p>Don’t have an account? <a href="/register">Register Now</a></p>
+    <hr style="margin:24px 0 16px;">
+    <button type="button" id="metamask-login-btn" style="background:#f6851b">MetaMask 登录</button>
+    <p style="font-size:12px;color:#555;margin-top:8px;">使用钱包签名快速登录 / 自动创建账号</p>
   </div>
-
-  <script>
-    async function connectMetaMask() {
-      const btn = document.getElementById('metamaskBtn');
-
-      // 检查是否安装了MetaMask
-      if (typeof window.ethereum === 'undefined') {
-        alert('Please install MetaMask to use this feature!');
-        window.open('https://metamask.io/download/', '_blank');
-        return;
-      }
-
-      try {
-        btn.disabled = true;
-        btn.innerHTML = '🔄 Connecting...';
-
-        // 请求连接钱包
-        const accounts = await window.ethereum.request({
-          method: 'eth_requestAccounts'
-        });
-
-        if (accounts.length === 0) {
-          throw new Error('No accounts found');
-        }
-
-        const address = accounts[0];
-        btn.innerHTML = '📝 Getting signature...';
-
-        // 获取nonce
-        const nonceResponse = await fetch('/auth/metamask/nonce', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ address })
-        });
-
-        if (!nonceResponse.ok) {
-          throw new Error('Failed to get nonce');
-        }
-
-        const { nonce } = await nonceResponse.json();
-
-        // 构建签名消息
-        const message = `Welcome to NTU NEST!\n\nPlease sign this message to authenticate.\n\nNonce: ${nonce}`;
-
-        // 请求用户签名
-        const signature = await window.ethereum.request({
-          method: 'personal_sign',
-          params: [message, address]
-        });
-
-        btn.innerHTML = '✅ Verifying...';
-
-        // 验证签名
-        const verifyResponse = await fetch('/auth/metamask/verify', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ address, signature })
-        });
-
-        if (!verifyResponse.ok) {
-          const error = await verifyResponse.json();
-          throw new Error(error.error || 'Verification failed');
-        }
-
-        const result = await verifyResponse.json();
-
-        if (result.success) {
-          btn.innerHTML = '🎉 Success! Redirecting...';
-          // 登录成功，重定向到主页
-          window.location.href = '/home';
-        } else {
-          throw new Error('Login failed');
-        }
-
-      } catch (error) {
-        console.error('MetaMask login error:', error);
-        alert('Login failed: ' + error.message);
-        btn.disabled = false;
-        btn.innerHTML = '🦊 Connect with MetaMask';
-      }
-    }
-
-    // 检查MetaMask是否已安装
-    window.addEventListener('load', () => {
-      const btn = document.getElementById('metamaskBtn');
-      if (typeof window.ethereum === 'undefined') {
-        btn.innerHTML = '🦊 Install MetaMask';
-        btn.onclick = () => {
-          window.open('https://metamask.io/download/', '_blank');
-        };
-      }
-    });
-  </script>
+  <script src="/js/metamask.js"></script>
 </body>
 </html>

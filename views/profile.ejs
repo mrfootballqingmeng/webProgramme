@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Profile - <%= profile.username %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="container" style="max-width:800px;margin:40px auto;">
+    <a href="/home" style="text-decoration:none">&larr; 返回首页</a>
+    <h2 style="margin-top:10px;">用户资料</h2>
+    <div style="display:flex;gap:24px;margin-top:20px;align-items:flex-start;">
+      <div>
+        <img src="<%= profile.avatar || '/images/logo.jpg' %>" onerror="this.onerror=null;this.src='/images/logo.jpg'" style="width:140px;height:140px;object-fit:cover;border-radius:8px;border:1px solid #ddd;" />
+      </div>
+      <div style="flex:1;">
+        <p><strong>用户名:</strong> <%= profile.username %></p>
+        <p><strong>显示名称:</strong> <%= profile.display_name || '-' %></p>
+        <p><strong>简介:</strong> <%= profile.bio || '-' %></p>
+        <p><strong>加入时间:</strong> <%= new Date(profile.created_at).toLocaleDateString() %></p>
+      </div>
+    </div>
+
+    <% if (user && user.id === profile.id) { %>
+    <hr style="margin:30px 0;">
+    <h3>编辑资料</h3>
+    <form action="/profile" method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:10px;">
+      <input type="text" name="username" placeholder="新的用户名 (留空不改)">
+      <input type="text" name="display_name" placeholder="显示名称 (留空不改)">
+      <textarea name="bio" placeholder="个人简介 (留空不改)" rows="3"></textarea>
+      <label style="cursor:pointer;">
+        头像: <input type="file" name="avatar" accept="image/*">
+      </label>
+      <button type="submit" style="padding:10px 16px;background:#111827;color:#fff;border:none;border-radius:6px;cursor:pointer;">保存修改</button>
+    </form>
+    <% } %>
+  </div>
+</body>
+</html>
