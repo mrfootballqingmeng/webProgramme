@@ -1,4 +1,4 @@
-// MetaMask 登录前端逻辑
+// MetaMask frontend login logic
 async function fetchJSON(url, opts){
   const res = await fetch(url, Object.assign({ headers: { 'Content-Type':'application/json' } }, opts||{}));
   if (!res.ok) throw new Error((await res.text())||('HTTP '+res.status));
@@ -6,12 +6,12 @@ async function fetchJSON(url, opts){
 }
 
 async function loginWithMetamask(){
-  if(!window.ethereum){ alert('请先安装 MetaMask'); return; }
+  if(!window.ethereum){ alert('Please install MetaMask first'); return; }
   if (window.__metamask_lock) return;
   window.__metamask_lock = true;
   try {
     const provider = window.ethereum;
-    // 先尝试 eth_accounts
+    // Try eth_accounts first
     let accounts = [];
     try { accounts = await provider.request({ method:'eth_accounts' }); } catch(e){ accounts=[]; }
     const maxRetries = 6; let attempt = 0;
@@ -31,14 +31,14 @@ async function loginWithMetamask(){
         }
       }
     }
-    if (!accounts || accounts.length===0) throw new Error('用户拒绝或钱包忙碌');
+    if (!accounts || accounts.length===0) throw new Error('User rejected or wallet busy');
     const address = accounts[0];
     const { nonce } = await fetchJSON('/api/metamask-nonce?address='+address);
     const signature = await provider.request({ method:'personal_sign', params:[nonce, address] });
     await fetchJSON('/api/metamask-login', { method:'POST', body: JSON.stringify({ address, signature }) });
     location.href = '/home';
   } catch(e){
-    console.error('MetaMask 登录失败', e); alert('MetaMask 登录失败: '+(e && e.message ? e.message : e));
+    console.error('MetaMask login failed', e); alert('MetaMask login failed: '+(e && e.message ? e.message : e));
   } finally { window.__metamask_lock = false; }
 }
 

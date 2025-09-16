@@ -8,8 +8,9 @@ const mysql = require("mysql2");
 const bcrypt = require("bcrypt");
 const path = require("path");
 const multer = require("multer");
-const crypto = require('crypto');
-const {verifyMessage} = require('ethers');
+// 引入模块
+const { initMetaMaskRoutes } = require('./modules/metamask');
+const { initSearchRoutes } = require('./modules/search');
 
 const app = express();
 const PORT = 3001;
@@ -64,81 +65,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({storage: storage});
 
-// ===== MetaMask 登录支持 =====
-const metamaskNonces = {};
-app.get('/api/metamask-nonce', (req, res) => {
-    const {address} = req.query;
-    if (!address) return res.status(400).json({error: '缺少address'});
-    const nonce = 'NTUNEST-' + crypto.randomBytes(8).toString('hex');
-    metamaskNonces[address.toLowerCase()] = nonce;
-    res.json({nonce});
-});
-
-app.post('/api/metamask-login', express.json(), (req, res) => {
-    const {address, signature} = req.body;
-    if (!address || !signature) return res.status(400).json({error: '参数不全'});
-    const nonce = metamaskNonces[address.toLowerCase()];
-    if (!nonce) return res.status(400).json({error: '请先获取nonce'});
-    try {
-        const recovered = verifyMessage(nonce, signature);
-        if (!recovered || recovered.toLowerCase() !== address.toLowerCase()) {
-            return res.status(401).json({error: '签名无效', recovered});
-        }
-        delete metamaskNonces[address.toLowerCase()];
-        // 查找或创建用户
-        const handleUserResults = (err, results) => {
-            if (err) return res.status(500).json({error: '数据库错误', detail: err.message});
-            if (!results || results.length === 0) {
-                const username = address.slice(2, 10);
-                db.query('INSERT INTO users (username, metamask) VALUES (?, ?)', [username, address], (iErr, insertRes) => {
-                    if (iErr) {
-                        if (iErr.code === 'ER_DUP_ENTRY') {
-                            db.query('SELECT * FROM users WHERE metamask = ? OR username=?', [address, username], (qErr, qRows) => {
-                                if (qErr || !qRows || !qRows.length) return res.status(500).json({error: '注册失败'});
-                                req.session.user = qRows[0];
-                                return res.json({success: true});
-                            });
-                            return;
-                        }
-                        // 若 password NOT NULL 造成失败则尝试修改
-                        if (iErr.code === 'ER_NO_DEFAULT_FOR_FIELD' || /doesn't have a default value/.test(iErr.message)) {
-                            db.query('ALTER TABLE users MODIFY password VARCHAR(255) NULL', (alterErr) => {
-                                if (alterErr) return res.status(500).json({error: '结构修复失败'});
-                                db.query('INSERT INTO users (username, metamask) VALUES (?, ?)', [username, address], (i2, r2) => {
-                                    if (i2) return res.status(500).json({error: '注册失败'});
-                                    req.session.user = {id: r2.insertId, username, metamask: address};
-                                    return res.json({success: true});
-                                });
-                            });
-                            return;
-                        }
-                        return res.status(500).json({error: '注册失败', detail: iErr.message});
-                    }
-                    req.session.user = {id: insertRes.insertId, username, metamask: address};
-                    return res.json({success: true});
-                });
-            } else {
-                req.session.user = results[0];
-                return res.json({success: true});
-            }
-        };
-        db.query('SELECT * FROM users WHERE metamask = ?', [address], (err, rows) => {
-            if (err) {
-                if (err.code === 'ER_BAD_FIELD_ERROR' || /Unknown column/.test(err.message)) {
-                    db.query('ALTER TABLE users ADD COLUMN metamask VARCHAR(255) NULL UNIQUE', (alterErr) => {
-                        if (alterErr) return res.status(500).json({error: '结构修复失败'});
-                        db.query('SELECT * FROM users WHERE metamask = ?', [address], handleUserResults);
-                    });
-                    return;
-                }
-                return handleUserResults(err, rows);
-            }
-            handleUserResults(null, rows);
-        });
-    } catch (e) {
-        return res.status(400).json({error: '签名验证失败'});
-    }
-});
+// ===== 初始化模块路由 =====
+initMetaMaskRoutes(app, db, express);
+initSearchRoutes(app, db);
 
 // ===== Drafts APIs =====
 // 获取当前用户草稿列表
@@ -326,41 +255,7 @@ app.post('/api/posts', upload.array('files'), (req, res) => {
 });
 
 
-// ========== Search API ==========
-app.get('/api/search', (req, res) => {
-    const query = req.query.q;
-    const searchType = req.query.type || 'all'; // all, username, content
-    if (!query) return res.json({posts: []});
 
-    let sql = `SELECT posts.*, users.username
-                 FROM posts
-                          JOIN users ON posts.user_id = users.id`;
-    let whereClause = '';
-    const searchTerm = `%${query}%`;
-
-    if (searchType === 'username') {
-        whereClause = ' WHERE users.username LIKE ?';
-    } else if (searchType === 'content') {
-        whereClause = ' WHERE posts.content LIKE ?';
-    } else { // 'all'
-        whereClause = ' WHERE posts.content LIKE ? OR users.username LIKE ?';
-    }
-
-    sql += whereClause + ' ORDER BY posts.created_at DESC LIMIT 10';
-
-    const params = searchType === 'all' ? [searchTerm, searchTerm] : [searchTerm];
-
-    db.query(sql, params, (err, rows) => {
-        if (err) return res.status(500).json({error: 'DB error'});
-        const posts = (rows || []).map(p => ({
-            id: p.id,
-            username: p.username,
-            content: p.content,
-            created_at: p.created_at
-        }));
-        res.json({posts});
-    });
-});
 
 
 // ========== Social Interaction APIs ==========
