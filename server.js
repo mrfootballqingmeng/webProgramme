@@ -1,3 +1,5 @@
+// import environment variables from .env file
+require('dotenv').config();
 // server.js
 const express = require("express");
 const session = require("express-session");
@@ -12,10 +14,10 @@ const PORT = 3001;
 
 // 配置 MySQL
 const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "root", // TODO: 修root改为你的真实密码
-  database: "ntunest"
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
 });
 
 db.connect(err => {
@@ -26,7 +28,7 @@ db.connect(err => {
 // 中间件
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
-  secret: "ntunest-secret",
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true
 }));
