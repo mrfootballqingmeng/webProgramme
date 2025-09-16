@@ -18,7 +18,6 @@
     <ul class="nav">
       <li class="active"><i class="fa fa-home"></i> Home</li>
       <li><a href="/topics"><i class="fa fa-hashtag"></i> Topics</a></li>
-      <li><i class="fa fa-magnifying-glass"></i> Explore</li>
       <li><i class="fa fa-bell"></i> Notifications</li>
       <li><i class="fa fa-envelope"></i> Messages</li>
       <li><i class="fa fa-user"></i> Profile</li>
@@ -52,7 +51,10 @@
 
   <!-- 中栏 -->
   <div class="main">
-    <h3 class="section-title">Recent Posts</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+      <h3 class="section-title" style="margin:0;">Recent Posts</h3>
+      <input type="text" id="post-search" placeholder="Search posts..." style="padding:5px;border:1px solid #ddd;border-radius:3px;font-size:14px;">
+    </div>
     <div class="posts-feed">
       <% if (posts && posts.length > 0) { %>
         <% posts.forEach(post => { %>
@@ -121,5 +123,21 @@
 
 </div>
 <script src="/js/main.js"></script>
+<script>
+// Recent Posts 搜索功能
+document.getElementById('post-search').addEventListener('input', function(e) {
+  const query = e.target.value.toLowerCase();
+  const posts = document.querySelectorAll('.post-card');
+  posts.forEach(post => {
+    const content = post.querySelector('.post-content p').textContent.toLowerCase();
+    const author = post.querySelector('.post-author').textContent.toLowerCase();
+    if (content.includes(query) || author.includes(query)) {
+      post.style.display = 'block';
+    } else {
+      post.style.display = 'none';
+    }
+  });
+});
+</script>
 </body>
 </html>

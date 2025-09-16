@@ -423,6 +423,42 @@ app.post('/api/posts', upload.array('files'), (req, res) => {
   });
 });
 
+// ========== Search API ==========
+app.get('/api/search', (req, res) => {
+  const q = req.query.q || '';
+  if (!q.trim()) return res.json({ posts: [] });
+  const sql = `SELECT posts.*, users.username FROM posts
+    JOIN users ON posts.user_id=users.id
+    WHERE posts.content LIKE ?
+    ORDER BY posts.created_at DESC LIMIT 20`;
+  db.query(sql, [`%${q}%`], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    const posts = (rows||[]).map(p => ({
+      id: p.id,
+      content: p.content,
+      username: p.username,
+      created_at: p.created_at
+    }));
+    res.json({ posts });
+  });
+});
+
+// ========== Search API ==========
+app.get('/api/search', (req, res) => {
+  const query = req.query.q;
+  if (!query) return res.json({ posts: [] });
+  const sql = `SELECT posts.*, users.username FROM posts
+    JOIN users ON posts.user_id=users.id
+    WHERE posts.content LIKE ? OR users.username LIKE ?
+    ORDER BY posts.created_at DESC LIMIT 10`;
+  const searchTerm = `%${query}%`;
+  db.query(sql, [searchTerm, searchTerm], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    const posts = (rows||[]).map(p => ({ id: p.id, username: p.username, content: p.content }));
+    res.json({ posts });
+  });
+});
+
 // ========== Social Interaction APIs ==========
 // like/unlike toggle
 app.post('/api/posts/:id/like', (req, res) => {
