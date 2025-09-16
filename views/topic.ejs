@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NTU NEST - <%= topic.display_name %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- 图标库 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="container">
+
+  <!-- 左栏 -->
+  <div class="sidebar-left">
+    <div class="logo-section">
+      <img src="/images/logo.jpg" class="nav-logo">
+      <h2>NTU NEST</h2>
+    </div>
+    <ul class="nav">
+      <li><a href="/home"><i class="fa fa-home"></i> Home</a></li>
+      <li><a href="/topics"><i class="fa fa-hashtag"></i> Topics</a></li>
+      <li><i class="fa fa-magnifying-glass"></i> Explore</li>
+      <li><i class="fa fa-bell"></i> Notifications</li>
+      <li><i class="fa fa-envelope"></i> Messages</li>
+      <li><i class="fa fa-user"></i> Profile</li>
+    </ul>
+    
+    <!-- 发帖表单 -->
+    <div class="post-form-section">
+      <h4>在 "<%= topic.display_name %>" 发帖</h4>
+      <form action="/topic/<%= topic.name %>/post" method="POST" enctype="multipart/form-data" class="post-form">
+        <textarea name="content" placeholder="分享你的想法..." required class="post-textarea"></textarea>
+        
+        <div class="file-upload">
+          <label for="media" class="file-label">
+            <i class="fa fa-image"></i> 添加图片
+          </label>
+          <input type="file" id="media" name="media" accept="image/*" class="file-input">
+        </div>
+        
+        <button type="submit" class="post-btn">
+          <i class="fa fa-paper-plane"></i> 发布
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 中栏 -->
+  <div class="main">
+    <h3 class="section-title"><%= topic.display_name %> - 所有帖子</h3>
+    <div class="posts-feed">
+      <% if (posts && posts.length > 0) { %>
+        <% posts.forEach(post => { %>
+          <div class="post-card">
+            <div class="post-header">
+              <span class="post-author">@<%= post.username %></span>
+              <span class="post-time"><%= new Date(post.created_at).toLocaleDateString() %></span>
+            </div>
+            <div class="post-content">
+              <p><%= post.content %></p>
+              <% if (post.media_path) { %>
+                <img src="<%= post.media_path %>" alt="Post media" class="post-media">
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="no-posts">
+          <p>这个话题还没有帖子</p>
+          <p>成为第一个发帖的人吧！</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- 右栏 -->
+  <div class="sidebar-right">
+    <div class="info-card">
+      <h3>话题信息</h3>
+      <p>当前话题: <strong><%= topic.display_name %></strong></p>
+      <p>帖子数量: <%= posts ? posts.length : 0 %></p>
+    </div>
+    <div class="info-card">
+      <h3>Campus Events</h3>
+      <ul>
+        <li>Welcome Week booths @North Spine</li>
+        <li>Hack & Learn Night every Fri 7pm</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h3>Quick Links</h3>
+      <a href="https://ntulearn.ntu.edu.sg/" target="_blank" class="quick-link">NTULearn</a>
+      <a href="https://sso.wis.ntu.edu.sg/links/pgstudent.html" target="_blank" class="quick-link">GSlink</a>
+    </div>
+  </div>
+
+</div>
+<script src="/js/main.js"></script>
+</body>
+</html>

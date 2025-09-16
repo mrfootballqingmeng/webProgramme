@@ -1,0 +1,51 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NTU NEST • Home</title>
+  <link rel="stylesheet" href="/public/css/style.css">
+  <link rel="icon" href="/public/assets/logo.jpg">
+</head>
+<body onload="loadTopics(); getWeather(); wireQuickPost();">
+  <div class="container">
+    <aside class="left-nav" aria-label="Primary">
+      <div class="brand"><img src="/public/assets/logo.jpg" alt="NTU NEST logo"><strong>NTU NEST</strong></div>
+      <nav class="nav" role="navigation">
+        <a href="/">🏠 Home</a>
+        <a href="/#topics"># Topics</a>
+        <a href="/">🔎 Explore</a>
+        <a href="/">🔔 Notifications</a>
+        <a href="/">✉️ Messages</a>
+        <a href="/login">👤 Profile</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="search"><input id="search" placeholder="Search topics or content..." oninput="searchTopics()"></div>
+      <section id="topics">
+        <h2 class="pill">Topic Plaza</h2>
+        <div id="topic-grid" class="card-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <aside class="right-info">
+      <h3>Today's Weather</h3>
+      <div id="weather" class="helper">Loading...</div>
+      <hr>
+      <h3>Campus Events</h3>
+      <ul>
+        <li>Welcome Week booths @North Spine</li>
+        <li>Hack & Learn Night every Fri 7pm</li>
+      </ul>
+      <hr>
+      <h3>Quick Links</h3>
+      <p><a class="pill" href="https://ntulearn.ntu.edu.sg/" target="_blank" rel="noopener">NTULearn</a></p>
+      <p><a class="pill" href="https://sso.wis.ntu.edu.sg/links/pgstudent.html" target="_blank" rel="noopener">GSLink</a></p>
+    </aside>
+  </div>
+  <button id="quick-post" class="quick-post" aria-label="Quick Post">+ Quick Post</button>
+  <script src="/public/js/app.js"></script>
+</body>
+</html>
