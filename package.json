@@ -1,0 +1,27 @@
+{
+  "name": "ntu-nest",
+  "version": "1.0.0",
+  "description": "NTU NEST campus forum with Node.js (Express), JWT auth, and MetaMask login",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "bcrypt": "^5.1.1",
+    "body-parser": "^2.2.0",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "ethers": "^6.13.2",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.1.5",
+    "express-session": "^1.18.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.14.5",
+    "nanoid": "^5.0.7"
+  }
+}
