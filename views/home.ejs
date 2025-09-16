@@ -18,10 +18,10 @@
     <ul class="nav">
       <li class="active"><i class="fa fa-home"></i> Home</li>
       <li><a href="/topics"><i class="fa fa-hashtag"></i> Topics</a></li>
-      <li><a href="/search"><i class="fa fa-magnifying-glass"></i> Search</a></li>
+      <li><i class="fa fa-magnifying-glass"></i> Explore</li>
       <li><i class="fa fa-bell"></i> Notifications</li>
       <li><i class="fa fa-envelope"></i> Messages</li>
-      <li><a href="/profile"><i class="fa fa-user"></i> Profile</a></li>
+      <li><i class="fa fa-user"></i> Profile</li>
     </ul>
      <!-- 发帖表单 (多图) -->
      <div class="post-form-section">
@@ -52,24 +52,6 @@
 
   <!-- 中栏 -->
   <div class="main">
-    <!-- 简单搜索框 -->
-    <div style="margin-bottom: 20px; background: white; padding: 15px; border-radius: 10px;">
-      <form action="/search" method="GET" style="display: flex; gap: 10px;">
-        <input
-          type="text"
-          name="q"
-          placeholder="搜索帖子或用户..."
-          style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;"
-        >
-        <button
-          type="submit"
-          style="padding: 8px 16px; background: #1da1f2; color: white; border: none; border-radius: 6px; cursor: pointer;"
-        >
-          搜索
-        </button>
-      </form>
-    </div>
-
     <h3 class="section-title">Recent Posts</h3>
     <div class="posts-feed">
       <% if (posts && posts.length > 0) { %>
@@ -139,6 +121,5 @@
 
 </div>
 <script src="/js/main.js"></script>
-<script src="/js/home-search.js"></script>
 </body>
 </html>

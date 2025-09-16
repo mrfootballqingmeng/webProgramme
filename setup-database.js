@@ -26,8 +26,8 @@ async function setupDatabase() {
         await connection.query('SET FOREIGN_KEY_CHECKS = 0');
         
         // 创建数据库
-        await connection.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'qzrdb'}`);
-        await connection.query(`USE ${process.env.DB_NAME || 'qzrdb'}`);
+        await connection.query('CREATE DATABASE IF NOT EXISTS ntunest');
+        await connection.query('USE ntunest');
         
         // 创建用户表
         await connection.query('DROP TABLE IF EXISTS posts');
