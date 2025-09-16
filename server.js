@@ -529,6 +529,37 @@ app.post('/profile', upload.single('avatar'), (req, res) => {
     });
 });
 
+app.post('/profile/change-password', (req, res) => {
+    if (!req.session.user) return res.redirect('/');
+    const id = req.session.user.id;
+    const {old_password, new_password, confirm_password} = req.body;
+    if (!new_password || new_password.length < 6) return res.send('❌ 新密码长度至少6位');
+    if (new_password !== confirm_password) return res.send('❌ 两次密码不一致');
+    db.query('SELECT password FROM users WHERE id=?', [id], async (err, rows) => {
+        if (err) return res.status(500).send('DB error');
+        if (!rows || rows.length === 0) return res.status(404).send('User not found');
+        const currentHash = rows[0].password;
+        try {
+            if (currentHash) { // 已存在密码则校验旧密码
+                if (!old_password) return res.send('❌ 请输入原密码');
+                const match = await bcrypt.compare(old_password, currentHash);
+                if (!match) return res.send('❌ 原密码错误');
+            }
+            const newHash = await bcrypt.hash(new_password, 10);
+            db.query('UPDATE users SET password=? WHERE id=?', [newHash, id], (uErr) => {
+                if (uErr) return res.status(500).send('❌ 修改失败');
+                req.session.destroy(() => {
+                    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+                    res.render("refresh");
+                });
+            });
+        } catch (e) {
+            console.error(e);
+            return res.status(500).send('❌ 内部错误');
+        }
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
