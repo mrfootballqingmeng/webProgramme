@@ -4,26 +4,14 @@ require('dotenv').config();
 const express = require("express");
 const session = require("express-session");
 const bodyParser = require("body-parser");
-const mysql = require("mysql2");
-const bcrypt = require("bcrypt");
+
 const path = require("path");
 const multer = require("multer");
 
 const app = express();
 const PORT = 3001;
 
-// 配置 MySQL
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
-
-db.connect(err => {
-  if (err) throw err;
-  console.log("✅ MySQL connected");
-});
+const db = require("./db");
 
 // 中间件
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -49,45 +37,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// ========== 登录注册 ==========
-app.get("/", (req, res) => {
-  if (req.session.user) return res.redirect("/home");
-  res.render("login");
-});
-
-app.get("/register", (req, res) => {
-  res.render("register");
-});
-
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  const sql = "SELECT * FROM users WHERE username = ?";
-  db.query(sql, [username], async (err, result) => {
-    if (err) throw err;
-    if (result.length === 0) return res.send("❌ 用户不存在");
-    const user = result[0];
-    const match = await bcrypt.compare(password, user.password);
-    if (match) {
-      req.session.user = user;
-      res.redirect("/home");
-    } else {
-      res.send("❌ 密码错误");
-    }
-  });
-});
-
-app.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-  const hashed = await bcrypt.hash(password, 10);
-  const sql = "INSERT INTO users (username, password) VALUES (?, ?)";
-  db.query(sql, [username, hashed], (err) => {
-    if (err) {
-      console.error(err);
-      return res.send("❌ 注册失败");
-    }
-    res.redirect("/");
-  });
-});
+// 引入登录注册路由
+const authRoutes = require("./routes/auth");
+app.use(authRoutes);
 
 // ========== 主页 ==========
 app.get("/home", (req, res) => {
@@ -151,12 +103,12 @@ app.post("/home/post", upload.single("media"), (req, res) => {
   db.query(
     "INSERT INTO posts (user_id, topic_id, content, media_path) VALUES (?, ?, ?, ?)",
     [req.session.user.id, topic_id, content, mediaPath],
-    (err, result) => {
+    (err) => {
       if (err) {
         console.error("数据库插入错误:", err);
         return res.send("❌ 发帖失败: " + err.message);
       }
-      console.log("数据库插入成功，插入ID:", result.insertId);
+      console.log("数据库插入成功");
       console.log("=== 发帖请求结束 ===");
       res.redirect("/home");
     }
