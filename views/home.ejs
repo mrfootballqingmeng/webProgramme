@@ -53,7 +53,14 @@
   <div class="main">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
       <h3 class="section-title" style="margin:0;">Recent Posts</h3>
-      <input type="text" id="post-search" placeholder="Search posts..." style="padding:5px;border:1px solid #ddd;border-radius:3px;font-size:14px;">
+      <div style="display:flex;align-items:center;gap:5px;">
+        <select id="search-type" style="padding:5px;border:1px solid #ddd;border-radius:3px;font-size:14px;">
+          <option value="all">All</option>
+          <option value="username">Username</option>
+          <option value="content">Content</option>
+        </select>
+        <input type="text" id="post-search" placeholder="Search posts..." style="padding:5px;border:1px solid #ddd;border-radius:3px;font-size:14px;">
+      </div>
     </div>
     <div class="posts-feed">
       <% if (posts && posts.length > 0) { %>
@@ -125,9 +132,11 @@
 <script src="/js/main.js"></script>
 <script>
 // Recent Posts 搜索功能
-document.getElementById('post-search').addEventListener('input', function(e) {
-  const query = e.target.value.trim();
+function performSearch() {
+  const query = document.getElementById('post-search').value.trim();
+  const searchType = document.getElementById('search-type').value;
   const posts = document.querySelectorAll('.post-card');
+
   posts.forEach(post => {
     const contentEl = post.querySelector('.post-content p');
     const authorEl = post.querySelector('.post-author');
@@ -141,17 +150,41 @@ document.getElementById('post-search').addEventListener('input', function(e) {
       return;
     }
 
-    if (content.includes(query.toLowerCase()) || author.includes(query.toLowerCase())) {
-      post.style.display = 'block';
-      // 高亮匹配内容
-      const regex = new RegExp(`(${query})`, 'gi');
-      contentEl.innerHTML = contentEl.textContent.replace(regex, '<mark>$1</mark>');
-      authorEl.innerHTML = authorEl.textContent.replace(regex, '<mark>$1</mark>');
-    } else {
-      post.style.display = 'none';
+    let shouldShow = false;
+    const regex = new RegExp(`(${query})`, 'gi');
+
+    // 重置高亮
+    contentEl.innerHTML = contentEl.textContent;
+    authorEl.innerHTML = authorEl.textContent;
+
+    if (searchType === 'all') {
+      shouldShow = content.includes(query.toLowerCase()) || author.includes(query.toLowerCase());
+      if (shouldShow) {
+        if (content.includes(query.toLowerCase())) {
+          contentEl.innerHTML = contentEl.textContent.replace(regex, '<mark>$1</mark>');
+        }
+        if (author.includes(query.toLowerCase())) {
+          authorEl.innerHTML = authorEl.textContent.replace(regex, '<mark>$1</mark>');
+        }
+      }
+    } else if (searchType === 'username') {
+      shouldShow = author.includes(query.toLowerCase());
+      if (shouldShow) {
+        authorEl.innerHTML = authorEl.textContent.replace(regex, '<mark>$1</mark>');
+      }
+    } else if (searchType === 'content') {
+      shouldShow = content.includes(query.toLowerCase());
+      if (shouldShow) {
+        contentEl.innerHTML = contentEl.textContent.replace(regex, '<mark>$1</mark>');
+      }
     }
+
+    post.style.display = shouldShow ? 'block' : 'none';
   });
-});
+}
+
+document.getElementById('post-search').addEventListener('input', performSearch);
+document.getElementById('search-type').addEventListener('change', performSearch);
 </script>
 </body>
 </html>

@@ -329,20 +329,39 @@ app.post('/api/posts', upload.array('files'), (req, res) => {
 // ========== Search API ==========
 app.get('/api/search', (req, res) => {
     const query = req.query.q;
+    const searchType = req.query.type || 'all'; // all, username, content
     if (!query) return res.json({posts: []});
-    const sql = `SELECT posts.*, users.username
+
+    let sql = `SELECT posts.*, users.username
                  FROM posts
-                          JOIN users ON posts.user_id = users.id
-                 WHERE posts.content LIKE ?
-                    OR users.username LIKE ?
-                 ORDER BY posts.created_at DESC LIMIT 10`;
+                          JOIN users ON posts.user_id = users.id`;
+    let whereClause = '';
     const searchTerm = `%${query}%`;
-    db.query(sql, [searchTerm, searchTerm], (err, rows) => {
+
+    if (searchType === 'username') {
+        whereClause = ' WHERE users.username LIKE ?';
+    } else if (searchType === 'content') {
+        whereClause = ' WHERE posts.content LIKE ?';
+    } else { // 'all'
+        whereClause = ' WHERE posts.content LIKE ? OR users.username LIKE ?';
+    }
+
+    sql += whereClause + ' ORDER BY posts.created_at DESC LIMIT 10';
+
+    const params = searchType === 'all' ? [searchTerm, searchTerm] : [searchTerm];
+
+    db.query(sql, params, (err, rows) => {
         if (err) return res.status(500).json({error: 'DB error'});
-        const posts = (rows || []).map(p => ({id: p.id, username: p.username, content: p.content}));
+        const posts = (rows || []).map(p => ({
+            id: p.id,
+            username: p.username,
+            content: p.content,
+            created_at: p.created_at
+        }));
         res.json({posts});
     });
 });
+
 
 // ========== Social Interaction APIs ==========
 // like/unlike toggle
