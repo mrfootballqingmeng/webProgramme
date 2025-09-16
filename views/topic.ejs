@@ -24,22 +24,17 @@
       <li><i class="fa fa-user"></i> Profile</li>
     </ul>
     
-    <!-- 发帖表单 -->
+    <!-- 发帖表单 (多图) -->
     <div class="post-form-section">
       <h4>在 "<%= topic.display_name %>" 发帖</h4>
       <form action="/topic/<%= topic.name %>/post" method="POST" enctype="multipart/form-data" class="post-form">
         <textarea name="content" placeholder="分享你的想法..." required class="post-textarea"></textarea>
-        
         <div class="file-upload">
-          <label for="media" class="file-label">
-            <i class="fa fa-image"></i> 添加图片
-          </label>
-          <input type="file" id="media" name="media" accept="image/*" class="file-input">
+          <label for="files" class="file-label"><i class="fa fa-image"></i> 添加图片(多选)</label>
+          <input type="file" id="files" name="files" accept="image/*" multiple class="file-input">
         </div>
-        
-        <button type="submit" class="post-btn">
-          <i class="fa fa-paper-plane"></i> 发布
-        </button>
+        <div id="weibo-previews" class="image-previews" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;"></div>
+        <button type="submit" class="post-btn"><i class="fa fa-paper-plane"></i> 发布</button>
       </form>
     </div>
   </div>
@@ -57,9 +52,29 @@
             </div>
             <div class="post-content">
               <p><%= post.content %></p>
-              <% if (post.media_path) { %>
-                <img src="<%= post.media_path %>" alt="Post media" class="post-media">
+              <% if (post.files && post.files.length>0) { %>
+                <div class="post-images" style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <% post.files.forEach(f => { %>
+                    <img src="<%= f %>" style="max-width:180px;max-height:180px;object-fit:cover;border-radius:6px;" onerror="this.onerror=null;this.src='/images/logo.jpg'" />
+                  <% }) %>
+                </div>
               <% } %>
+            </div>
+            <div class="post-actions" style="margin-top:8px;display:flex;gap:10px;">
+              <button class="btn-like" data-post-id="<%= post.id %>">❤️ <span class="like-count"><%= post.likes || 0 %></span></button>
+              <button class="btn-comment-toggle" data-post-id="<%= post.id %>">💬 <span class="comment-count"><%= post.comments || 0 %></span></button>
+              <button class="btn-share" data-post-id="<%= post.id %>">↗️ <span class="share-count"><%= post.shares || 0 %></span></button>
+            </div>
+            <div class="comments-section" data-post-id="<%= post.id %>" style="display:none;margin-top:6px;">
+              <div class="existing-comments" style="font-size:14px;">
+                <% (post.comments_list||[]).forEach(c => { %>
+                  <div class="comment"><strong><%= c.username %></strong>: <%= c.content %></div>
+                <% }) %>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:4px;">
+                <input class="comment-input" placeholder="Add a comment..." style="flex:1;padding:4px;">
+                <button class="btn-comment-submit" style="padding:4px 10px;">发送</button>
+              </div>
             </div>
           </div>
         <% }) %>

@@ -8,9 +8,12 @@ const mysql = require("mysql2");
 const bcrypt = require("bcrypt");
 const path = require("path");
 const multer = require("multer");
+const crypto = require('crypto');
+const { verifyMessage } = require('ethers');
 
 const app = express();
 const PORT = 3001;
+
 
 // 配置 MySQL
 const db = mysql.createConnection({
@@ -23,7 +26,147 @@ const db = mysql.createConnection({
 db.connect(err => {
   if (err) throw err;
   console.log("✅ MySQL connected");
+  // 先确保基础表，再补充扩展字段与社交/草稿表
+  ensureBaseTables(() => {
+    ensureUserExtraFields();
+    ensurePostsMediaPaths();
+    ensureSocialTables();
+    ensureDraftsTable();
+  });
 });
+
+// ====== 创建基础核心表 (users / topics / posts) ======
+function ensureBaseTables(done){
+  // users 表（password 允许 NULL 以兼容纯 MetaMask 用户）
+  const createUsers = `CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB;`;
+  const createTopics = `CREATE TABLE IF NOT EXISTS topics (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    display_name VARCHAR(100) NOT NULL
+  ) ENGINE=InnoDB;`;
+  const createPosts = `CREATE TABLE IF NOT EXISTS posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    topic_id INT NOT NULL,
+    content TEXT NOT NULL,
+    media_path VARCHAR(255) NULL,
+    media_paths TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB;`;
+
+  db.query(createUsers, (e1)=>{
+    if (e1) console.warn('[ensure-base] users failed', e1.message);
+    db.query(createTopics, (e2)=>{
+      if (e2) console.warn('[ensure-base] topics failed', e2.message);
+      // 插入默认话题（仅在表为空时）
+      db.query('SELECT COUNT(*) AS cnt FROM topics', (cErr, cRows)=>{
+        if (!cErr && cRows && cRows[0] && cRows[0].cnt === 0){
+          db.query(`INSERT INTO topics (name, display_name) VALUES
+            ('trade','Second-hand Trading'),
+            ('food','Food Sharing'),
+            ('study','Learning Exchange'),
+            ('events','Campus Events'),
+            ('lost','Lost Property'),
+            ('living','Accommodation & Living'),
+            ('hobbies','Hobbies & Interests'),
+            ('chat','Casual Chat')`, (insErr)=>{ if (insErr) console.warn('[ensure-base] insert topics failed', insErr.message); });
+        }
+      });
+      db.query(createPosts, (e3)=>{
+        if (e3) console.warn('[ensure-base] posts failed', e3.message);
+        if (typeof done === 'function') done();
+      });
+    });
+  });
+}
+
+// ====== Schema Ensure Helpers ======
+function ensureUserExtraFields(){
+  const addCol = (name, ddl) => {
+    db.query(`SHOW COLUMNS FROM users LIKE '${name}'`, (err, rows)=>{
+      if (err) return console.warn(`[ensure] users.${name} show error`, err.message);
+      if (!rows || rows.length===0){
+        db.query(`ALTER TABLE users ADD COLUMN ${ddl}`, e=>{
+          if (e) console.warn(`[ensure] add users.${name} failed`, e.message); else console.log(`✔ ensured users.${name}`);
+        });
+      }
+    });
+  };
+  addCol('avatar', 'avatar VARCHAR(255) NULL');
+  addCol('bio', 'bio TEXT NULL');
+  addCol('display_name', 'display_name VARCHAR(100) NULL');
+  // metamask 登录列（唯一，允许空）
+  db.query("SHOW COLUMNS FROM users LIKE 'metamask'", (err, rows)=>{
+    if (err) return console.warn('[ensure] users.metamask show error', err.message);
+    if (!rows || rows.length===0){
+      db.query('ALTER TABLE users ADD COLUMN metamask VARCHAR(255) NULL UNIQUE', e=>{
+        if (e) console.warn('[ensure] add users.metamask failed', e.message); else console.log('✔ ensured users.metamask');
+      });
+    }
+  });
+}
+
+function ensurePostsMediaPaths(){
+  db.query("SHOW COLUMNS FROM posts LIKE 'media_paths'", (err, rows)=>{
+    if (err) return console.warn('[ensure] posts.media_paths show error', err.message);
+    if (!rows || rows.length===0){
+      db.query('ALTER TABLE posts ADD COLUMN media_paths TEXT NULL', e=>{
+        if (e) console.warn('[ensure] add posts.media_paths failed', e.message); else console.log('✔ ensured posts.media_paths');
+      });
+    }
+  });
+  // 兼容原有 media_path 仍保留，不做删除
+}
+
+function ensureSocialTables(){
+  db.query(`CREATE TABLE IF NOT EXISTS likes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    post_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY ux_like_user_post (user_id, post_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB;`, e=>{ if (e) console.warn('[ensure] likes table failed', e.message); });
+
+  db.query(`CREATE TABLE IF NOT EXISTS comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    post_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB;`, e=>{ if (e) console.warn('[ensure] comments table failed', e.message); });
+
+  db.query(`CREATE TABLE IF NOT EXISTS shares (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    post_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB;`, e=>{ if (e) console.warn('[ensure] shares table failed', e.message); });
+}
+
+function ensureDraftsTable(){
+  db.query(`CREATE TABLE IF NOT EXISTS drafts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    content TEXT NULL,
+    media_paths TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB;`, e=>{ if (e) console.warn('[ensure] drafts table failed', e.message); else console.log('✔ ensured drafts table'); });
+}
 
 // 中间件
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -48,6 +191,156 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage: storage });
+
+// ===== MetaMask 登录支持 =====
+const metamaskNonces = {};
+app.get('/api/metamask-nonce', (req, res) => {
+  const { address } = req.query;
+  if (!address) return res.status(400).json({ error: '缺少address' });
+  const nonce = 'NTUNEST-' + crypto.randomBytes(8).toString('hex');
+  metamaskNonces[address.toLowerCase()] = nonce;
+  res.json({ nonce });
+});
+
+app.post('/api/metamask-login', express.json(), (req, res) => {
+  const { address, signature } = req.body;
+  if (!address || !signature) return res.status(400).json({ error: '参数不全' });
+  const nonce = metamaskNonces[address.toLowerCase()];
+  if (!nonce) return res.status(400).json({ error: '请先获取nonce' });
+  try {
+    const recovered = verifyMessage(nonce, signature);
+    if (!recovered || recovered.toLowerCase() !== address.toLowerCase()) {
+      return res.status(401).json({ error: '签名无效', recovered });
+    }
+    delete metamaskNonces[address.toLowerCase()];
+    // 查找或创建用户
+    const handleUserResults = (err, results) => {
+      if (err) return res.status(500).json({ error: '数据库错误', detail: err.message });
+      if (!results || results.length===0) {
+        const username = address.slice(2,10);
+        db.query('INSERT INTO users (username, metamask) VALUES (?, ?)', [username, address], (iErr, insertRes) => {
+          if (iErr) {
+            if (iErr.code === 'ER_DUP_ENTRY') {
+              db.query('SELECT * FROM users WHERE metamask = ? OR username=?', [address, username], (qErr, qRows) => {
+                if (qErr || !qRows || !qRows.length) return res.status(500).json({ error: '注册失败' });
+                req.session.user = qRows[0];
+                return res.json({ success: true });
+              });
+              return;
+            }
+            // 若 password NOT NULL 造成失败则尝试修改
+            if (iErr.code === 'ER_NO_DEFAULT_FOR_FIELD' || /doesn't have a default value/.test(iErr.message)) {
+              db.query('ALTER TABLE users MODIFY password VARCHAR(255) NULL', (alterErr) => {
+                if (alterErr) return res.status(500).json({ error: '结构修复失败' });
+                db.query('INSERT INTO users (username, metamask) VALUES (?, ?)', [username, address], (i2, r2) => {
+                  if (i2) return res.status(500).json({ error: '注册失败' });
+                  req.session.user = { id: r2.insertId, username, metamask: address };
+                  return res.json({ success: true });
+                });
+              });
+              return;
+            }
+            return res.status(500).json({ error: '注册失败', detail: iErr.message });
+          }
+          req.session.user = { id: insertRes.insertId, username, metamask: address };
+          return res.json({ success: true });
+        });
+      } else {
+        req.session.user = results[0];
+        return res.json({ success: true });
+      }
+    };
+    db.query('SELECT * FROM users WHERE metamask = ?', [address], (err, rows) => {
+      if (err) {
+        if (err.code === 'ER_BAD_FIELD_ERROR' || /Unknown column/.test(err.message)) {
+          db.query('ALTER TABLE users ADD COLUMN metamask VARCHAR(255) NULL UNIQUE', (alterErr) => {
+            if (alterErr) return res.status(500).json({ error: '结构修复失败' });
+            db.query('SELECT * FROM users WHERE metamask = ?', [address], handleUserResults);
+          });
+          return;
+        }
+        return handleUserResults(err, rows);
+      }
+      handleUserResults(null, rows);
+    });
+  } catch (e) {
+    return res.status(400).json({ error: '签名验证失败' });
+  }
+});
+
+// ===== Drafts APIs =====
+// 获取当前用户草稿列表
+app.get('/api/drafts', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+  db.query('SELECT id, content, media_paths, created_at, updated_at FROM drafts WHERE user_id = ? ORDER BY updated_at DESC', [req.session.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    res.json({ drafts: (rows||[]).map(r => ({ id: r.id, content: r.content||'', files: r.media_paths ? (()=>{ try{return JSON.parse(r.media_paths);}catch(e){return [];}})() : [] , created_at: r.created_at, updated_at: r.updated_at })) });
+  });
+});
+
+// 新建或更新草稿（若传 draft_id 则更新）— 接收多图
+app.post('/api/drafts', upload.array('files'), (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+  const userId = req.session.user.id;
+  const draftId = req.body.draft_id ? parseInt(req.body.draft_id,10) : null;
+  const content = req.body.content || '';
+  // 已保留的服务器文件（前端传 JSON 字符串 kept_files）
+  let kept = [];
+  if (req.body.kept_files) { try { kept = JSON.parse(req.body.kept_files); } catch(e) { kept = []; } }
+  const newFiles = (req.files||[]).map(f=>'/uploads/'+f.filename);
+  const all = kept.concat(newFiles);
+  const mediaPathsJson = all.length ? JSON.stringify(all) : null;
+  if (draftId) {
+    db.query('UPDATE drafts SET content = ?, media_paths = ? WHERE id = ? AND user_id = ?', [content, mediaPathsJson, draftId, userId], (err) => {
+      if (err) return res.status(500).json({ error: 'Update failed' });
+      res.json({ success: true, id: draftId, files: all });
+    });
+  } else {
+    db.query('INSERT INTO drafts (user_id, content, media_paths) VALUES (?, ?, ?)', [userId, content, mediaPathsJson], (err, insertRes) => {
+      if (err) return res.status(500).json({ error: 'Insert failed' });
+      res.json({ success: true, id: insertRes.insertId, files: all });
+    });
+  }
+});
+
+// 删除草稿
+app.delete('/api/drafts/:id', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+  const id = parseInt(req.params.id,10);
+  db.query('DELETE FROM drafts WHERE id = ? AND user_id = ?', [id, req.session.user.id], (err, result) => {
+    if (err) return res.status(500).json({ error: 'Delete failed' });
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
+    res.json({ success: true });
+  });
+});
+
+// 发布草稿 -> posts 表
+app.post('/api/drafts/:id/publish', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+  const id = parseInt(req.params.id,10);
+  db.query('SELECT * FROM drafts WHERE id = ? AND user_id = ?', [id, req.session.user.id], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    if (!rows || rows.length===0) return res.status(404).json({ error: 'Draft not found' });
+    const draft = rows[0];
+    // 默认发布到 chat 话题（或第一个）
+    db.query('SELECT id FROM topics WHERE name = ? LIMIT 1', ['chat'], (tErr, tRows) => {
+      if (tErr) return res.status(500).json({ error: 'DB error' });
+      const next = (topicId) => {
+        db.query('INSERT INTO posts (user_id, topic_id, content, media_paths) VALUES (?, ?, ?, ?)', [req.session.user.id, topicId, draft.content||'', draft.media_paths], (iErr, insertRes) => {
+          if (iErr) return res.status(500).json({ error: 'Publish failed' });
+          // 删除草稿
+          db.query('DELETE FROM drafts WHERE id = ?', [id], ()=>{});
+          res.json({ success: true, post_id: insertRes.insertId });
+        });
+      };
+      if (tRows && tRows.length>0) return next(tRows[0].id);
+      db.query('SELECT id FROM topics LIMIT 1', (ttErr, ttRows) => {
+        if (ttErr || !ttRows || !ttRows.length) return res.status(500).json({ error: 'No topic' });
+        next(ttRows[0].id);
+      });
+    });
+  });
+});
 
 // ========== 登录注册 ==========
 app.get("/", (req, res) => {
@@ -89,27 +382,137 @@ app.post("/register", async (req, res) => {
   });
 });
 
+// ========== Posts API (list + create with multiple files) ==========
+app.get('/api/posts', (req, res) => {
+  const topic = req.query.topic || null;
+  const params = [];
+  let sql = `SELECT posts.*, users.username,
+    (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) AS likes_count,
+    (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id) AS comments_count,
+    (SELECT COUNT(*) FROM shares WHERE shares.post_id = posts.id) AS shares_count
+    FROM posts JOIN users ON posts.user_id=users.id`;
+  if (topic) { sql += ' WHERE posts.topic_id = (SELECT id FROM topics WHERE name = ? LIMIT 1)'; params.push(topic); }
+  sql += ' ORDER BY posts.created_at DESC LIMIT 100';
+  db.query(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    const mapped = (rows||[]).map(p => ({ id: p.id, user: { id: p.user_id, name: p.username }, content: p.content, files: p.media_paths ? (()=>{ try{return JSON.parse(p.media_paths);}catch(e){return p.media_path? [p.media_path]:[];} })() : (p.media_path? [p.media_path]:[]), createdAt: p.created_at, likes: p.likes_count||0, comments: p.comments_count||0, shares: p.shares_count||0 }));
+    res.json({ posts: mapped });
+  });
+});
+
+app.post('/api/posts', upload.array('files'), (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+  const content = req.body.content || '';
+  const files = (req.files || []).map(f => '/uploads/' + f.filename);
+  const mediaPathsJson = files.length ? JSON.stringify(files) : null;
+  const topicName = req.body.topic || 'chat';
+  db.query('SELECT id FROM topics WHERE name = ? LIMIT 1', [topicName], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    const topicId = (rows && rows[0]) ? rows[0].id : 1;
+    db.query('INSERT INTO posts (user_id, topic_id, content, media_paths) VALUES (?, ?, ?, ?)', [req.session.user.id, topicId, content, mediaPathsJson], (iErr, insertRes) => {
+      if (iErr) return res.status(500).json({ error: 'Insert failed' });
+      return res.json({ success: true, id: insertRes.insertId, files });
+    });
+  });
+});
+
+// ========== Social Interaction APIs ==========
+// like/unlike toggle
+app.post('/api/posts/:id/like', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+  const postId = parseInt(req.params.id,10); const userId = req.session.user.id;
+  db.query('SELECT id FROM likes WHERE user_id = ? AND post_id = ?', [userId, postId], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    if (rows && rows.length>0){
+      db.query('DELETE FROM likes WHERE id=?', [rows[0].id], dErr => {
+        if (dErr) return res.status(500).json({ error: 'Delete failed' });
+        db.query('SELECT COUNT(*) AS cnt FROM likes WHERE post_id=?', [postId], (cErr, cRes)=>{ if (cErr) return res.json({ likes:0}); res.json({ likes: cRes[0].cnt, liked:false }); });
+      });
+    } else {
+      db.query('INSERT INTO likes (user_id, post_id) VALUES (?, ?)', [userId, postId], iErr => {
+        if (iErr) return res.status(500).json({ error: 'Insert failed' });
+        db.query('SELECT COUNT(*) AS cnt FROM likes WHERE post_id=?', [postId], (cErr, cRes)=>{ if (cErr) return res.json({ likes:1}); res.json({ likes: cRes[0].cnt, liked:true }); });
+      });
+    }
+  });
+});
+
+// comment
+app.post('/api/posts/:id/comment', express.json(), (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+  const postId = parseInt(req.params.id,10), userId = req.session.user.id;
+  const content = (req.body.content||'').trim();
+  if (!content) return res.status(400).json({ error: 'Empty comment' });
+  db.query('INSERT INTO comments (user_id, post_id, content) VALUES (?, ?, ?)', [userId, postId, content], (iErr, insertRes)=>{
+    if (iErr) return res.status(500).json({ error: 'Insert failed' });
+    db.query('SELECT comments.*, users.username FROM comments JOIN users ON comments.user_id=users.id WHERE comments.id = ?', [insertRes.insertId], (qErr, rows)=>{
+      if (qErr) return res.status(500).json({ error: 'DB error' });
+      db.query('SELECT COUNT(*) AS cnt FROM comments WHERE post_id = ?', [postId], (cErr, cRes)=>{
+        if (cErr) return res.json({ comment: rows[0], comments:1 });
+        res.json({ comment: rows[0], comments: cRes[0].cnt });
+      });
+    });
+  });
+});
+
+// share (repost)
+app.post('/api/posts/:id/share', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+  const postId = parseInt(req.params.id,10), userId = req.session.user.id;
+  db.query('INSERT INTO shares (user_id, post_id) VALUES (?, ?)', [userId, postId], (sErr)=>{
+    if (sErr) return res.status(500).json({ error: 'Share failed' });
+    db.query('SELECT * FROM posts WHERE id=?', [postId], (qErr, rows)=>{
+      if (qErr || !rows || rows.length===0) return res.status(500).json({ error: 'Original not found' });
+      const original = rows[0];
+      const repostContent = `Repost: ${original.content}`;
+      db.query('INSERT INTO posts (user_id, topic_id, content, media_path) VALUES (?, ?, ?, ?)', [userId, original.topic_id, repostContent, original.media_path], (iErr)=>{
+        if (iErr) return res.status(500).json({ error: 'Repost failed' });
+        db.query('SELECT COUNT(*) AS cnt FROM shares WHERE post_id=?', [postId], (cErr, cRes)=>{ if (cErr) return res.json({ shares:1 }); res.json({ shares: cRes[0].cnt }); });
+      });
+    });
+  });
+});
+
 // ========== 主页 ==========
 app.get("/home", (req, res) => {
   if (!req.session.user) return res.redirect("/");
-  
-  // 获取帖子和话题
-  db.query(
-    "SELECT posts.*, users.username, topics.display_name as topic_name FROM posts JOIN users ON posts.user_id=users.id JOIN topics ON posts.topic_id=topics.id ORDER BY posts.created_at DESC LIMIT 20",
-    (err, posts) => {
-      if (err) throw err;
-      
-      // 获取所有话题供发帖选择
-      db.query("SELECT * FROM topics", (err, topics) => {
-        if (err) throw err;
-        res.render("home", { 
-          user: req.session.user, 
-          posts: posts || [], 
-          topics: topics || [] 
-        });
+  // 获取所有话题
+  db.query('SELECT * FROM topics', (tErr, topics) => {
+    if (tErr) return res.status(500).send('数据库错误');
+    const sql = `SELECT posts.*, users.username, topics.display_name AS topic_name,
+      (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) AS likes_count,
+      (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id) AS comments_count,
+      (SELECT COUNT(*) FROM shares WHERE shares.post_id = posts.id) AS shares_count
+      FROM posts JOIN users ON posts.user_id=users.id JOIN topics ON posts.topic_id=topics.id
+      ORDER BY posts.created_at DESC LIMIT 50`;
+    db.query(sql, (pErr, posts) => {
+      if (pErr) return res.status(500).send('数据库错误');
+      const postIds = (posts||[]).map(p=>p.id);
+      const finish = (commentsByPost) => {
+        const mapped = (posts||[]).map(p => ({
+          id: p.id,
+            user_id: p.user_id,
+            username: p.username,
+            topic_name: p.topic_name,
+            content: p.content,
+            files: p.media_paths ? (()=>{ try{return JSON.parse(p.media_paths);}catch(e){ return p.media_path? [p.media_path]:[]; } })() : (p.media_path? [p.media_path]:[]),
+            created_at: p.created_at,
+            likes: p.likes_count||0,
+            comments: p.comments_count||0,
+            shares: p.shares_count||0,
+            comments_list: (commentsByPost[p.id]||[])
+        }));
+        res.render('home', { user: req.session.user, topics: topics||[], posts: mapped });
+      };
+      if (postIds.length === 0) return finish({});
+      db.query(`SELECT comments.*, users.username FROM comments JOIN users ON comments.user_id=users.id WHERE comments.post_id IN (${postIds.map(()=>'?').join(',')}) ORDER BY comments.created_at ASC`, postIds, (cErr, cRows) => {
+        if (cErr) return finish({});
+        const commentsByPost = {};
+        (cRows||[]).forEach(c => { (commentsByPost[c.post_id]=commentsByPost[c.post_id]||[]).push({ id:c.id, user_id:c.user_id, username:c.username, content:c.content, created_at:c.created_at }); });
+        finish(commentsByPost);
       });
-    }
-  );
+    });
+  });
 });
 
 // ========== 话题列表页 ==========
@@ -121,43 +524,18 @@ app.get("/topics", (req, res) => {
   });
 });
 
-// 从主页发帖接口
-app.post("/home/post", upload.single("media"), (req, res) => {
-  console.log("=== 发帖请求开始 ===");
-  console.log("用户会话:", req.session.user);
-  console.log("请求体:", req.body);
-  console.log("上传文件:", req.file);
-  
-  if (!req.session.user) {
-    console.log("用户未登录，重定向到首页");
-    return res.redirect("/");
-  }
-  
+// 从主页发帖接口 (多图支持: 字段名 files)
+app.post("/home/post", upload.array("files"), (req, res) => {
+  if (!req.session.user) return res.redirect("/");
   const { content, topic_id } = req.body;
-  const mediaPath = req.file ? "/uploads/" + req.file.filename : null;
-  
-  console.log("解析后的数据:");
-  console.log("- 内容:", content);
-  console.log("- 话题ID:", topic_id);
-  console.log("- 媒体路径:", mediaPath);
-  console.log("- 用户ID:", req.session.user.id);
-
-  if (!content || !topic_id) {
-    console.log("数据不完整，返回错误");
-    return res.send("❌ 请填写完整信息");
-  }
-
-  console.log("开始执行数据库插入...");
+  if (!content || !topic_id) return res.send("❌ 请填写完整信息");
+  const files = (req.files||[]).map(f=>'/uploads/'+f.filename);
+  const mediaPathsJson = files.length ? JSON.stringify(files) : null;
   db.query(
-    "INSERT INTO posts (user_id, topic_id, content, media_path) VALUES (?, ?, ?, ?)",
-    [req.session.user.id, topic_id, content, mediaPath],
-    (err, result) => {
-      if (err) {
-        console.error("数据库插入错误:", err);
-        return res.send("❌ 发帖失败: " + err.message);
-      }
-      console.log("数据库插入成功，插入ID:", result.insertId);
-      console.log("=== 发帖请求结束 ===");
+    "INSERT INTO posts (user_id, topic_id, content, media_paths) VALUES (?, ?, ?, ?)",
+    [req.session.user.id, topic_id, content, mediaPathsJson],
+    (err) => {
+      if (err) { console.error(err); return res.send("❌ 发帖失败"); }
       res.redirect("/home");
     }
   );
@@ -182,25 +560,22 @@ app.get("/topic/:name", (req, res) => {
   });
 });
 
-// 发帖接口（支持文件上传）
-app.post("/topic/:name/post", upload.single("media"), (req, res) => {
+// 话题内发帖 (多图)
+app.post("/topic/:name/post", upload.array("files"), (req, res) => {
   if (!req.session.user) return res.redirect("/");
   const topicName = req.params.name;
   const { content } = req.body;
-  const mediaPath = req.file ? "/uploads/" + req.file.filename : null;
-
-  db.query("SELECT * FROM topics WHERE name=?", [topicName], (err, rows) => {
+  const files = (req.files||[]).map(f=>'/uploads/'+f.filename);
+  const mediaPathsJson = files.length ? JSON.stringify(files) : null;
+  db.query("SELECT * FROM topics WHERE name= ?", [topicName], (err, rows) => {
     if (err) throw err;
     if (rows.length === 0) return res.send("❌ 话题不存在");
     const topic = rows[0];
     db.query(
-      "INSERT INTO posts (user_id, topic_id, content, media_path) VALUES (?, ?, ?, ?)",
-      [req.session.user.id, topic.id, content, mediaPath],
+      "INSERT INTO posts (user_id, topic_id, content, media_paths) VALUES (?, ?, ?, ?)",
+      [req.session.user.id, topic.id, content, mediaPathsJson],
       (err) => {
-        if (err) {
-          console.error(err);
-          return res.send("❌ 发帖失败");
-        }
+        if (err) { console.error(err); return res.send("❌ 发帖失败"); }
         res.redirect("/topic/" + topicName);
       }
     );
@@ -211,6 +586,47 @@ app.post("/topic/:name/post", upload.single("media"), (req, res) => {
 app.get("/logout", (req, res) => {
   req.session.destroy();
   res.redirect("/");
+});
+
+// ========== 用户资料 ==========
+app.get('/profile', (req, res) => {
+  if (!req.session.user) return res.redirect('/');
+  const id = req.session.user.id;
+  db.query('SELECT id, username, display_name, avatar, bio, created_at FROM users WHERE id = ?', [id], (err, rows) => {
+    if (err) return res.status(500).send('DB error');
+    if (!rows || rows.length===0) return res.status(404).send('User not found');
+    res.render('profile', { user: req.session.user, profile: rows[0] });
+  });
+});
+
+app.get('/profile/:id', (req, res) => {
+  const id = parseInt(req.params.id,10);
+  db.query('SELECT id, username, display_name, avatar, bio, created_at FROM users WHERE id = ?', [id], (err, rows) => {
+    if (err) return res.status(500).send('DB error');
+    if (!rows || rows.length===0) return res.status(404).send('User not found');
+    res.render('profile', { user: req.session.user || null, profile: rows[0] });
+  });
+});
+
+app.post('/profile', upload.single('avatar'), (req, res) => {
+  if (!req.session.user) return res.redirect('/');
+  const id = req.session.user.id;
+  const { username, display_name, bio } = req.body;
+  const avatarPath = req.file ? '/uploads/' + req.file.filename : null;
+  const updates = []; const params = [];
+  if (username) { updates.push('username = ?'); params.push(username); }
+  if (display_name) { updates.push('display_name = ?'); params.push(display_name); }
+  if (bio) { updates.push('bio = ?'); params.push(bio); }
+  if (avatarPath) { updates.push('avatar = ?'); params.push(avatarPath); }
+  if (updates.length===0) return res.redirect('/profile');
+  params.push(id);
+  db.query('UPDATE users SET '+updates.join(', ')+' WHERE id = ?', params, (err) => {
+    if (err) { console.error('profile update error', err); return res.status(500).send('Update failed'); }
+    db.query('SELECT id, username, display_name, avatar FROM users WHERE id=?', [id], (qErr, rows)=>{
+      if (!qErr && rows && rows[0]) req.session.user = Object.assign(req.session.user, rows[0]);
+      res.redirect('/profile');
+    });
+  });
 });
 
 app.listen(PORT, () => {
