@@ -26,37 +26,41 @@ async function setupDatabase() {
         await connection.query('SET FOREIGN_KEY_CHECKS = 0');
         
         // 创建数据库
-        await connection.query('CREATE DATABASE IF NOT EXISTS ntunest');
-        await connection.query('USE ntunest');
-        
-        // 创建用户表
+        await connection.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'qzrdb'}`);
+        await connection.query(`USE ${process.env.DB_NAME || 'qzrdb'}`);
+
+        // 删除现有表（按依赖顺序）
+        await connection.query('DROP TABLE IF EXISTS shares');
+        await connection.query('DROP TABLE IF EXISTS comments');
+        await connection.query('DROP TABLE IF EXISTS likes');
+        await connection.query('DROP TABLE IF EXISTS drafts');
         await connection.query('DROP TABLE IF EXISTS posts');
         await connection.query('DROP TABLE IF EXISTS users');
         await connection.query('DROP TABLE IF EXISTS topics');
-        
+
+        // 创建用户表
         await connection.query(`
             CREATE TABLE users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(50) UNIQUE,
-                password VARCHAR(255),
-                wallet_address VARCHAR(42) UNIQUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT check_login_method CHECK (
-                    (username IS NOT NULL AND password IS NOT NULL) OR
-                    (wallet_address IS NOT NULL)
-                )
-            )
+                username VARCHAR(50) NOT NULL UNIQUE,
+                password VARCHAR(255) NULL,
+                avatar VARCHAR(255) NULL,
+                bio TEXT NULL,
+                display_name VARCHAR(100) NULL,
+                metamask VARCHAR(255) NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB
         `);
-        
+
         // 创建话题表
         await connection.query(`
             CREATE TABLE topics (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(100) NOT NULL UNIQUE,
                 display_name VARCHAR(100) NOT NULL
-            )
+            ) ENGINE=InnoDB
         `);
-        
+
         // 创建帖子表
         await connection.query(`
             CREATE TABLE posts (
@@ -64,11 +68,63 @@ async function setupDatabase() {
                 user_id INT NOT NULL,
                 topic_id INT NOT NULL,
                 content TEXT NOT NULL,
-                media_path VARCHAR(255),
+                media_path VARCHAR(255) NULL,
+                media_paths TEXT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id),
-                FOREIGN KEY (topic_id) REFERENCES topics(id)
-            )
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB
+        `);
+
+        // 创建点赞表
+        await connection.query(`
+            CREATE TABLE likes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                post_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY ux_like_user_post (user_id, post_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB
+        `);
+
+        // 创建评论表
+        await connection.query(`
+            CREATE TABLE comments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                post_id INT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB
+        `);
+
+        // 创建分享表
+        await connection.query(`
+            CREATE TABLE shares (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                post_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB
+        `);
+
+        // 创建草稿表
+        await connection.query(`
+            CREATE TABLE drafts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                content TEXT NULL,
+                media_paths TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB
         `);
         
         // 插入默认话题
@@ -86,13 +142,18 @@ async function setupDatabase() {
         
         await connection.query('SET FOREIGN_KEY_CHECKS = 1');
         
-        console.log('数据库初始化完成！');
-        console.log('创建的表：');
-        console.log('- users (用户表)');
-        console.log('- topics (话题表)');
-        console.log('- posts (帖子表)');
+        console.log('✅ 数据库初始化完成！');
         console.log('');
-        console.log('插入的默认话题：');
+        console.log('📋 创建的表：');
+        console.log('- users (用户表) - 支持传统登录和MetaMask登录');
+        console.log('- topics (话题表)');
+        console.log('- posts (帖子表) - 支持多图片上传');
+        console.log('- likes (点赞表)');
+        console.log('- comments (评论表)');
+        console.log('- shares (分享表)');
+        console.log('- drafts (草稿表)');
+        console.log('');
+        console.log('🏷️ 插入的默认话题：');
         console.log('- trade: Second-hand Trading');
         console.log('- food: Food Sharing');
         console.log('- study: Learning Exchange');
@@ -101,6 +162,8 @@ async function setupDatabase() {
         console.log('- living: Accommodation & Living');
         console.log('- hobbies: Hobbies & Interests');
         console.log('- chat: Casual Chat');
+        console.log('');
+        console.log('🚀 现在可以运行 npm start 启动服务器！');
         
     } catch (error) {
         console.error('数据库设置失败:', error.message);

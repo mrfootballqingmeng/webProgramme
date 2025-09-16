@@ -31,149 +31,15 @@ const db = mysql.createConnection({
 });
 
 db.connect(err => {
-  if (err) throw err;
+  if (err) {
+    console.error("❌ MySQL connection failed:", err.message);
+    console.log("💡 请先运行: node setup-database.js");
+    process.exit(1);
+  }
   console.log("✅ MySQL connected");
-  // 先确保基础表，再补充扩展字段与社交/草稿表
-  ensureBaseTables(() => {
-    ensureUserExtraFields();
-    ensurePostsMediaPaths();
-    ensureSocialTables();
-    ensureDraftsTable();
-  });
 });
 
-// ====== 创建基础核心表 (users / topics / posts) ======
-function ensureBaseTables(done){
-  // users 表（password 允许 NULL 以兼容纯 MetaMask 用户）
-  const createUsers = `CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  ) ENGINE=InnoDB;`;
-  const createTopics = `CREATE TABLE IF NOT EXISTS topics (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    display_name VARCHAR(100) NOT NULL
-  ) ENGINE=InnoDB;`;
-  const createPosts = `CREATE TABLE IF NOT EXISTS posts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    topic_id INT NOT NULL,
-    content TEXT NOT NULL,
-    media_path VARCHAR(255) NULL,
-    media_paths TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
-  ) ENGINE=InnoDB;`;
 
-  db.query(createUsers, (e1)=>{
-    if (e1) console.warn('[ensure-base] users failed', e1.message);
-    db.query(createTopics, (e2)=>{
-      if (e2) console.warn('[ensure-base] topics failed', e2.message);
-      // 插入默认话题（仅在表为空时）
-      db.query('SELECT COUNT(*) AS cnt FROM topics', (cErr, cRows)=>{
-        if (!cErr && cRows && cRows[0] && cRows[0].cnt === 0){
-          db.query(`INSERT INTO topics (name, display_name) VALUES
-            ('trade','Second-hand Trading'),
-            ('food','Food Sharing'),
-            ('study','Learning Exchange'),
-            ('events','Campus Events'),
-            ('lost','Lost Property'),
-            ('living','Accommodation & Living'),
-            ('hobbies','Hobbies & Interests'),
-            ('chat','Casual Chat')`, (insErr)=>{ if (insErr) console.warn('[ensure-base] insert topics failed', insErr.message); });
-        }
-      });
-      db.query(createPosts, (e3)=>{
-        if (e3) console.warn('[ensure-base] posts failed', e3.message);
-        if (typeof done === 'function') done();
-      });
-    });
-  });
-}
-
-// ====== Schema Ensure Helpers ======
-function ensureUserExtraFields(){
-  const addCol = (name, ddl) => {
-    db.query(`SHOW COLUMNS FROM users LIKE '${name}'`, (err, rows)=>{
-      if (err) return console.warn(`[ensure] users.${name} show error`, err.message);
-      if (!rows || rows.length===0){
-        db.query(`ALTER TABLE users ADD COLUMN ${ddl}`, e=>{
-          if (e) console.warn(`[ensure] add users.${name} failed`, e.message); else console.log(`✔ ensured users.${name}`);
-        });
-      }
-    });
-  };
-  addCol('avatar', 'avatar VARCHAR(255) NULL');
-  addCol('bio', 'bio TEXT NULL');
-  addCol('display_name', 'display_name VARCHAR(100) NULL');
-  // metamask 登录列（唯一，允许空）
-  db.query("SHOW COLUMNS FROM users LIKE 'metamask'", (err, rows)=>{
-    if (err) return console.warn('[ensure] users.metamask show error', err.message);
-    if (!rows || rows.length===0){
-      db.query('ALTER TABLE users ADD COLUMN metamask VARCHAR(255) NULL UNIQUE', e=>{
-        if (e) console.warn('[ensure] add users.metamask failed', e.message); else console.log('✔ ensured users.metamask');
-      });
-    }
-  });
-}
-
-function ensurePostsMediaPaths(){
-  db.query("SHOW COLUMNS FROM posts LIKE 'media_paths'", (err, rows)=>{
-    if (err) return console.warn('[ensure] posts.media_paths show error', err.message);
-    if (!rows || rows.length===0){
-      db.query('ALTER TABLE posts ADD COLUMN media_paths TEXT NULL', e=>{
-        if (e) console.warn('[ensure] add posts.media_paths failed', e.message); else console.log('✔ ensured posts.media_paths');
-      });
-    }
-  });
-  // 兼容原有 media_path 仍保留，不做删除
-}
-
-function ensureSocialTables(){
-  db.query(`CREATE TABLE IF NOT EXISTS likes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    post_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY ux_like_user_post (user_id, post_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
-  ) ENGINE=InnoDB;`, e=>{ if (e) console.warn('[ensure] likes table failed', e.message); });
-
-  db.query(`CREATE TABLE IF NOT EXISTS comments (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    post_id INT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
-  ) ENGINE=InnoDB;`, e=>{ if (e) console.warn('[ensure] comments table failed', e.message); });
-
-  db.query(`CREATE TABLE IF NOT EXISTS shares (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    post_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
-  ) ENGINE=InnoDB;`, e=>{ if (e) console.warn('[ensure] shares table failed', e.message); });
-}
-
-function ensureDraftsTable(){
-  db.query(`CREATE TABLE IF NOT EXISTS drafts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    content TEXT NULL,
-    media_paths TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  ) ENGINE=InnoDB;`, e=>{ if (e) console.warn('[ensure] drafts table failed', e.message); else console.log('✔ ensured drafts table'); });
-}
 
 // 中间件
 app.use(bodyParser.urlencoded({ extended: true }));
