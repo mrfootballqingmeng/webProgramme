@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register • NTU NEST</title>
+  <link rel="stylesheet" href="/public/css/style.css">
+  <link rel="icon" href="/public/assets/logo.jpg">
+</head>
+<body class="register-wrap">
+  <div class="auth-card" role="form" aria-labelledby="title">
+    <h1 id="title"><img src="/public/assets/logo.jpg" alt="NTU NEST logo">Register</h1>
+    <form onsubmit="handleRegisterSubmit(event)">
+      <label class="sr-only" for="username">Username</label>
+      <input class="input" id="username" name="username" placeholder="Choose a username" required>
+      <label class="sr-only" for="password">Password</label>
+      <input class="input" id="password" name="password" placeholder="Create a password" type="password" required>
+      <button class="btn" type="submit">Create account</button>
+    </form>
+    <p class="helper" style="margin-top:8px">
+      Already have an account? <a href="/login">Back to Login</a>
+    </p>
+  </div>
+  <script src="/public/js/app.js"></script>
+</body>
+</html>

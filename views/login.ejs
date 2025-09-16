@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NTU NEST - Login</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url("/images/campus-muted.jpg") no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 30px;
+      border-radius: 16px;
+      width: 350px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .card img {
+      max-width: 60px;
+      margin-bottom: 10px;
+    }
+    .card h2 {
+      margin: 10px 0 20px;
+      font-size: 24px;
+      color: #111827;
+    }
+    .card input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .card button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      background: #111827;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .card p {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .card a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    .card a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="/images/logo.jpg" alt="NTU NEST Logo">
+    <h2>Login</h2>
+    <form action="/login" method="POST">
+      <input type="text" name="username" placeholder="Enter your username" required>
+      <input type="password" name="password" placeholder="Enter your password" required>
+      <button type="submit">Sign in</button>
+    </form>
+    <p>Don’t have an account? <a href="/register">Register Now</a></p>
+  </div>
+</body>
+</html>

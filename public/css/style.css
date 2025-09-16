@@ -1,0 +1,275 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f5f5f5;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 20% 55% 25%;
+  gap: 15px;
+  padding: 15px;
+}
+
+/* 左栏 */
+.sidebar-left {
+  background: linear-gradient(to bottom, #fff6d6, #d6f5d6);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: calc(100vh - 30px);
+}
+.logo-section {
+  text-align: center;
+}
+.nav-logo {
+  max-width: 80px;
+  border-radius: 50%;
+}
+.nav {
+  list-style: none;
+  padding: 0;
+}
+.nav li {
+  margin: 12px 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+.nav li i {
+  margin-right: 8px;
+  color: #555;
+}
+
+/* 发帖表单样式 */
+.post-form-section {
+  margin: 20px 0;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.post-form-section h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.post-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.topic-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  color: #333;
+}
+
+.topic-select:focus {
+  outline: none;
+  border-color: #2c5aa0;
+  box-shadow: 0 0 0 2px rgba(44, 90, 160, 0.1);
+}
+
+.post-textarea {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  font-size: 14px;
+  background: white;
+}
+
+.post-textarea:focus {
+  outline: none;
+  border-color: #2c5aa0;
+  box-shadow: 0 0 0 2px rgba(44, 90, 160, 0.1);
+}
+
+.file-upload {
+  position: relative;
+}
+
+.file-label {
+  display: inline-block;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  transition: background-color 0.2s;
+}
+
+.file-label:hover {
+  background: #e9ecef;
+}
+
+.file-label i {
+  margin-right: 6px;
+}
+
+.file-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.post-btn {
+  padding: 10px 15px;
+  background: linear-gradient(135deg, #2c5aa0, #1e3d72);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.post-btn:hover {
+  background: linear-gradient(135deg, #1e3d72, #2c5aa0);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(44, 90, 160, 0.3);
+}
+
+.post-btn i {
+  margin-right: 6px;
+}
+
+/* 中栏 */
+.main {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+}
+.section-title {
+  margin-bottom: 15px;
+}
+.topics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+.topic-card {
+  background: #fdfdfd;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 15px;
+}
+.topic-card h4 {
+  margin: 5px 0;
+}
+.topic-tag {
+  font-size: 12px;
+  background: #eee;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+/* 帖子样式 */
+.posts-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.post-card {
+  background: #fdfdfd;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 15px;
+  transition: box-shadow 0.2s ease;
+}
+
+.post-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.post-author {
+  font-weight: bold;
+  color: #2c5aa0;
+}
+
+.post-topic {
+  color: #666;
+  font-style: italic;
+}
+
+.post-time {
+  color: #999;
+  margin-left: auto;
+}
+
+.post-content {
+  line-height: 1.5;
+}
+
+.post-content p {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.post-media {
+  max-width: 100%;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.no-posts {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  background: #f9f9f9;
+  border-radius: 12px;
+  border: 2px dashed #ddd;
+}
+
+.no-posts p {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+/* 右栏 */
+.sidebar-right {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.info-card {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.quick-link {
+  display: inline-block;
+  margin: 4px 0;
+  padding: 6px 12px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #333;
+}
+.quick-link:hover {
+  background: #e0e0e0;
+}

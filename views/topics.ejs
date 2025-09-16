@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NTU NEST - Topics</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- 图标库 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="container">
+
+  <!-- 左栏 -->
+  <div class="sidebar-left">
+    <div class="logo-section">
+      <img src="/images/logo.jpg" class="nav-logo">
+      <h2>NTU NEST</h2>
+    </div>
+    <ul class="nav">
+      <li><a href="/home"><i class="fa fa-home"></i> Home</a></li>
+      <li class="active"><i class="fa fa-hashtag"></i> Topics</li>
+      <li><i class="fa fa-magnifying-glass"></i> Explore</li>
+      <li><i class="fa fa-bell"></i> Notifications</li>
+      <li><i class="fa fa-envelope"></i> Messages</li>
+      <li><i class="fa fa-user"></i> Profile</li>
+    </ul>
+  </div>
+
+  <!-- 中栏 -->
+  <div class="main">
+    <h3 class="section-title">All Topics</h3>
+    <div class="topics-grid">
+      <% if (topics && topics.length > 0) { %>
+        <% topics.forEach(topic => { %>
+          <div class="topic-card">
+            <span class="topic-tag">Topic</span>
+            <h4><a href="/topic/<%= topic.name %>"><%= topic.display_name %></a></h4>
+            <p>点击进入话题查看所有帖子</p>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="no-topics">
+          <p>暂无话题</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- 右栏 -->
+  <div class="sidebar-right">
+    <div class="info-card">
+      <h3>Today's Weather</h3>
+      <div id="weather">Loading...</div>
+    </div>
+    <div class="info-card">
+      <h3>Campus Events</h3>
+      <ul>
+        <li>Welcome Week booths @North Spine</li>
+        <li>Hack & Learn Night every Fri 7pm</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h3>Quick Links</h3>
+      <a href="https://ntulearn.ntu.edu.sg/" target="_blank" class="quick-link">NTULearn</a>
+      <a href="https://sso.wis.ntu.edu.sg/links/pgstudent.html" target="_blank" class="quick-link">GSlink</a>
+    </div>
+  </div>
+
+</div>
+<script src="/js/main.js"></script>
+</body>
+</html>

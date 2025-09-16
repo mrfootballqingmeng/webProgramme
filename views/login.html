@@ -1,0 +1,29 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login • NTU NEST</title>
+  <link rel="stylesheet" href="/public/css/style.css">
+  <link rel="icon" href="/public/assets/logo.jpg">
+</head>
+<body class="login-wrap">
+  <div class="auth-card" role="form" aria-labelledby="title">
+    <h1 id="title"><img src="/public/assets/logo.jpg" alt="NTU NEST logo">Login</h1>
+    <form onsubmit="handleLoginSubmit(event)">
+      <label class="sr-only" for="username">Username</label>
+      <input class="input" id="username" name="username" placeholder="Username" autocomplete="username" required>
+      <label class="sr-only" for="password">Password</label>
+      <input class="input" id="password" name="password" placeholder="Password" type="password" autocomplete="current-password" required>
+      <button class="btn" type="submit">Sign in</button>
+    </form>
+    <button class="btn btn-outline" style="margin-top:8px" onclick="loginWithMetamask()">Login with MetaMask</button>
+    <p class="helper" style="margin-top:8px">
+      Don't have an account?
+      <a href="/register" id="register-link" aria-label="Register Now (opens registration form)">Register Now</a>
+    </p>
+  </div>
+  <script src="/public/js/app.js"></script>
+</body>
+</html>
