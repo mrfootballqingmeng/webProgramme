@@ -9,9 +9,14 @@ USE ntunest;
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(50) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  username VARCHAR(50) UNIQUE,
+  password VARCHAR(255),
+  wallet_address VARCHAR(42) UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT check_login_method CHECK (
+    (username IS NOT NULL AND password IS NOT NULL) OR
+    (wallet_address IS NOT NULL)
+  )
 );
 
 -- 话题表

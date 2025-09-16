@@ -4,17 +4,32 @@ require('dotenv').config();
 const express = require("express");
 const session = require("express-session");
 const bodyParser = require("body-parser");
-
+const mysql = require("mysql2");
+const bcrypt = require("bcrypt");
 const path = require("path");
 const multer = require("multer");
+const { ethers } = require("ethers");
+const crypto = require("crypto");
 
 const app = express();
 const PORT = 3001;
 
-const db = require("./db");
+// 配置 MySQL
+const db = mysql.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+});
+
+db.connect(err => {
+  if (err) throw err;
+  console.log("✅ MySQL connected");
+});
 
 // 中间件
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json()); // 添加JSON解析支持
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -37,9 +52,136 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// 引入登录注册路由
-const authRoutes = require("./routes/auth");
-app.use(authRoutes);
+// ========== 登录注册 ==========
+app.get("/", (req, res) => {
+  if (req.session.user) return res.redirect("/home");
+  res.render("login");
+});
+
+app.get("/register", (req, res) => {
+  res.render("register");
+});
+
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+  const sql = "SELECT * FROM users WHERE username = ?";
+  db.query(sql, [username], async (err, result) => {
+    if (err) throw err;
+    if (result.length === 0) return res.send("❌ 用户不存在");
+    const user = result[0];
+    const match = await bcrypt.compare(password, user.password);
+    if (match) {
+      req.session.user = user;
+      res.redirect("/home");
+    } else {
+      res.send("❌ 密码错误");
+    }
+  });
+});
+
+app.post("/register", async (req, res) => {
+  const { username, password } = req.body;
+  const hashed = await bcrypt.hash(password, 10);
+  const sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+  db.query(sql, [username, hashed], (err) => {
+    if (err) {
+      console.error(err);
+      return res.send("❌ 注册失败");
+    }
+    res.redirect("/");
+  });
+});
+
+// ========== MetaMask 登录 ==========
+// 存储临时nonce
+const nonces = new Map();
+
+// 获取nonce用于签名
+app.post("/auth/metamask/nonce", (req, res) => {
+  const { address } = req.body;
+  if (!address) {
+    return res.status(400).json({ error: "Address is required" });
+  }
+
+  // 生成随机nonce
+  const nonce = crypto.randomBytes(32).toString('hex');
+  nonces.set(address.toLowerCase(), nonce);
+
+  // 5分钟后清除nonce
+  setTimeout(() => {
+    nonces.delete(address.toLowerCase());
+  }, 5 * 60 * 1000);
+
+  res.json({ nonce });
+});
+
+// 验证签名并登录
+app.post("/auth/metamask/verify", async (req, res) => {
+  const { address, signature } = req.body;
+
+  if (!address || !signature) {
+    return res.status(400).json({ error: "Address and signature are required" });
+  }
+
+  const nonce = nonces.get(address.toLowerCase());
+  if (!nonce) {
+    return res.status(400).json({ error: "Invalid or expired nonce" });
+  }
+
+  try {
+    // 构建签名消息
+    const message = `Welcome to NTU NEST!\n\nPlease sign this message to authenticate.\n\nNonce: ${nonce}`;
+
+    // 验证签名
+    const recoveredAddress = ethers.verifyMessage(message, signature);
+
+    if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
+      return res.status(400).json({ error: "Invalid signature" });
+    }
+
+    // 清除使用过的nonce
+    nonces.delete(address.toLowerCase());
+
+    // 查找或创建用户
+    const sql = "SELECT * FROM users WHERE wallet_address = ?";
+    db.query(sql, [address.toLowerCase()], async (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      let user;
+      if (result.length === 0) {
+        // 创建新用户
+        const insertSql = "INSERT INTO users (wallet_address) VALUES (?)";
+        db.query(insertSql, [address.toLowerCase()], (err, insertResult) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Failed to create user" });
+          }
+
+          user = {
+            id: insertResult.insertId,
+            wallet_address: address.toLowerCase(),
+            username: `User_${address.slice(0, 8)}`
+          };
+
+          req.session.user = user;
+          res.json({ success: true, user });
+        });
+      } else {
+        // 现有用户登录
+        user = result[0];
+        req.session.user = user;
+        res.json({ success: true, user });
+      }
+    });
+
+  } catch (error) {
+    console.error("Signature verification error:", error);
+    res.status(400).json({ error: "Invalid signature" });
+  }
+});
 
 // ========== 主页 ==========
 app.get("/home", (req, res) => {
@@ -103,12 +245,12 @@ app.post("/home/post", upload.single("media"), (req, res) => {
   db.query(
     "INSERT INTO posts (user_id, topic_id, content, media_path) VALUES (?, ?, ?, ?)",
     [req.session.user.id, topic_id, content, mediaPath],
-    (err) => {
+    (err, result) => {
       if (err) {
         console.error("数据库插入错误:", err);
         return res.send("❌ 发帖失败: " + err.message);
       }
-      console.log("数据库插入成功");
+      console.log("数据库插入成功，插入ID:", result.insertId);
       console.log("=== 发帖请求结束 ===");
       res.redirect("/home");
     }
