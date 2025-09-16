@@ -126,13 +126,27 @@
 <script>
 // Recent Posts 搜索功能
 document.getElementById('post-search').addEventListener('input', function(e) {
-  const query = e.target.value.toLowerCase();
+  const query = e.target.value.trim();
   const posts = document.querySelectorAll('.post-card');
   posts.forEach(post => {
-    const content = post.querySelector('.post-content p').textContent.toLowerCase();
-    const author = post.querySelector('.post-author').textContent.toLowerCase();
-    if (content.includes(query) || author.includes(query)) {
+    const contentEl = post.querySelector('.post-content p');
+    const authorEl = post.querySelector('.post-author');
+    const content = contentEl.textContent.toLowerCase();
+    const author = authorEl.textContent.toLowerCase();
+
+    if (!query) {
       post.style.display = 'block';
+      contentEl.innerHTML = contentEl.textContent;
+      authorEl.innerHTML = authorEl.textContent;
+      return;
+    }
+
+    if (content.includes(query.toLowerCase()) || author.includes(query.toLowerCase())) {
+      post.style.display = 'block';
+      // 高亮匹配内容
+      const regex = new RegExp(`(${query})`, 'gi');
+      contentEl.innerHTML = contentEl.textContent.replace(regex, '<mark>$1</mark>');
+      authorEl.innerHTML = authorEl.textContent.replace(regex, '<mark>$1</mark>');
     } else {
       post.style.display = 'none';
     }
