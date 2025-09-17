@@ -23,7 +23,7 @@ function initMetaMaskRoutes(app, db, express) {
     });
 
     // MetaMask login endpoint
-    app.post('/api/metamask-login', express.json(), (req, res) => {
+    app.post('/api/metamask-login', (req, res) => {
         const { address, signature } = req.body;
         if (!address || !signature) return res.status(400).json({ error: 'Missing parameters' });
 

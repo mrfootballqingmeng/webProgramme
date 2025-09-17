@@ -36,10 +36,41 @@ body {
   margin: 12px 0;
   font-size: 16px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 .nav li i {
-  margin-right: 8px;
+  width: 20px;
+  margin-right: 12px;
   color: #555;
+  text-align: center;
+  flex-shrink: 0;
+}
+.nav li a {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  width: 100%;
+}
+.nav li a i {
+  width: 20px;
+  margin-right: 12px;
+  color: #555;
+  text-align: center;
+  flex-shrink: 0;
+}
+.nav li a:hover {
+  text-decoration: underline;
+  color: #2c5aa0;
+}
+.nav li.active {
+  font-weight: bold;
+  color: #2c5aa0;
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
 }
 
 /* 发帖表单样式 */
@@ -168,6 +199,8 @@ body {
   background: white;
   border-radius: 12px;
   padding: 20px;
+  height: calc(100vh - 30px);
+  overflow-y: auto;
 }
 .section-title {
   margin-bottom: 15px;
@@ -269,6 +302,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  height: calc(100vh - 30px);
+  overflow-y: auto;
 }
 .info-card {
   background: white;
@@ -289,7 +324,8 @@ body {
   background: #e0e0e0;
 }
 
-/* Profile Page */
+/* Profile Page - Moved to standard three-column layout */
+/*
 .profile-container {
   max-width: 800px;
   margin: 40px auto;
@@ -307,6 +343,7 @@ body {
   background: radial-gradient(circle at 85% 15%, rgba(44,90,160,0.08), transparent 60%);
   pointer-events: none;
 }
+*/
 .profile-back {
   display: inline-block;
   font-size: 14px;
@@ -589,7 +626,8 @@ body {
 .notification-item i { color: #2c5aa0; }
 .notif-time { margin-left: auto; color: #9ca3af; font-size: 12px; }
 
-/* Messages Page Styles */
+/* Messages Page Styles - Moved to standard three-column layout */
+/*
 .messages-container {
   max-width: 1200px;
   margin: 20px auto;
@@ -601,6 +639,7 @@ body {
   display: flex;
   flex-direction: column;
 }
+*/
 
 .messages-header {
   padding: 20px 24px;
@@ -625,6 +664,96 @@ body {
   font-size: 24px;
   font-weight: 600;
   color: #111827;
+}
+
+/* New vertical layout for messages */
+.conversations-section {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.conversations-section .conversations-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.conversations-section .conversations-header h4 {
+  margin: 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.conversations-section .conversations-list {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.conversations-section .conversation-item {
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.conversations-section .conversation-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.welcome-screen {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
+.welcome-screen .welcome-content h4 {
+  margin: 8px 0 12px 0;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.welcome-screen .welcome-content p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.chat-area {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  flex-direction: column;
+}
+
+.chat-area .chat-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+}
+
+.chat-area .messages-content {
+  min-height: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
 .messages-layout {
@@ -1050,12 +1179,12 @@ body {
 }
 
 @media (max-width: 880px) {
-  .profile-container { margin:24px 16px; padding:28px 22px 36px; }
+  /* .profile-container { margin:24px 16px; padding:28px 22px 36px; } */
   .profile-header { gap:20px; }
   .profile-avatar { width:120px; height:120px; }
 }
 @media (max-width: 560px) {
-  .profile-container { padding:24px 18px 32px; }
+  /* .profile-container { padding:24px 18px 32px; } */
   .profile-avatar { width:100px; height:100px; }
   .profile-title { font-size:22px; }
   .profile-form input[type=text], .profile-form textarea { font-size:13px; }

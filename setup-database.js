@@ -13,7 +13,7 @@ async function setupDatabase() {
         connection = await mysql.createConnection({
             host: process.env.DB_HOST || 'localhost',
             user: process.env.DB_USER || 'root',
-            password: process.env.DB_PASS || '',
+            password: process.env.DB_PASS || '123456dlswbm',
             charset: 'utf8mb4',
             multipleStatements: true
         });

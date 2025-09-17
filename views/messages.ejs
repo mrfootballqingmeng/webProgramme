@@ -2,102 +2,140 @@
 <html>
 <head>
   <title>Messages - NTU NEST</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="/css/style.css">
+  <!-- 图标库 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <div class="messages-container">
-    <div class="messages-header">
-      <a href="/home" class="back-link">&larr; 返回首页</a>
-      <h2 class="messages-title">私信</h2>
+<div class="container">
+
+  <!-- 左栏 -->
+  <div class="sidebar-left">
+    <div class="logo-section">
+      <img src="/images/logo.jpg" class="nav-logo">
+      <h2>NTU NEST</h2>
+    </div>
+    <ul class="nav">
+      <li><a href="/home"><i class="fa fa-home"></i> Home</a></li>
+      <li><a href="/topics"><i class="fa fa-hashtag"></i> Topics</a></li>
+      <li><a href="/my-follows"><i class="fa fa-user-check"></i> My Follow</a></li>
+      <li><a href="/explore"><i class="fa fa-magnifying-glass"></i> Explore</a></li>
+      <li><a href="/notifications"><i class="fa fa-bell"></i> Notifications</a></li>
+      <li class="active"><i class="fa fa-envelope"></i> Messages</li>
+      <li><a href="/profile"><i class="fa fa-user"></i> Profile</a></li>
+      <li><a href="/history"><i class="fa fa-clock-rotate-left"></i> History</a></li>
+    </ul>
+  </div>
+
+  <!-- 中栏 -->
+  <div class="main">
+    <h3 class="section-title">私信</h3>
+
+    <!-- 上部：对话列表 -->
+    <div class="conversations-section">
+      <div class="conversations-header">
+        <h4>对话列表</h4>
+        <button id="new-message-btn" class="btn-new-message">
+          <i class="fas fa-plus"></i> 新建私信
+        </button>
+      </div>
+      <div id="conversations-list" class="conversations-list">
+        <div class="loading-message">加载中...</div>
+      </div>
     </div>
 
-    <div class="messages-layout">
-      <!-- 左侧：对话列表 -->
-      <div class="conversations-panel">
-        <div class="conversations-header">
-          <h3>对话</h3>
-          <button id="new-message-btn" class="btn-new-message">
-            <i class="fas fa-plus"></i> 新建私信
+    <!-- 中部：欢迎信息 -->
+    <div id="welcome-screen" class="welcome-screen">
+      <div class="welcome-content">
+        <i class="fas fa-envelope-open-text welcome-icon"></i>
+        <h4>欢迎来到你的收件箱</h4>
+        <p>选择一个对话开始聊天，或者点击"新建私信"发送第一封私信。</p>
+      </div>
+    </div>
+    
+    <!-- 下部：聊天区域 -->
+    <div id="chat-area" class="chat-area" style="display: none;">
+      <div class="chat-header">
+        <div class="chat-user-info">
+          <img id="chat-avatar" class="chat-avatar" src="/images/logo.jpg" alt="avatar">
+          <span id="chat-username" class="chat-username"></span>
+        </div>
+      </div>
+      
+      <div id="messages-content" class="messages-content">
+        <!-- Messages will be loaded here -->
+      </div>
+      
+      <div class="message-input-area">
+        <div class="message-input-container">
+          <textarea id="message-input" placeholder="输入消息..." rows="2"></textarea>
+          <button id="send-message-btn" class="btn-send-message">
+            <i class="fas fa-paper-plane"></i>
           </button>
         </div>
-        <div id="conversations-list" class="conversations-list">
-          <div class="loading-message">加载中...</div>
-        </div>
-      </div>
-
-      <!-- 右侧：消息内容 -->
-      <div class="messages-panel">
-        <div id="welcome-screen" class="welcome-screen">
-          <div class="welcome-content">
-            <i class="fas fa-envelope-open-text welcome-icon"></i>
-            <h3>欢迎来到你的收件箱</h3>
-            <p>选择一个对话开始聊天，或者点击"新建私信"发送第一封私信。</p>
-          </div>
-        </div>
-        
-        <div id="chat-area" class="chat-area" style="display: none;">
-          <div class="chat-header">
-            <div class="chat-user-info">
-              <img id="chat-avatar" class="chat-avatar" src="/images/logo.jpg" alt="avatar">
-              <span id="chat-username" class="chat-username"></span>
-            </div>
-          </div>
-          
-          <div id="messages-content" class="messages-content">
-            <!-- Messages will be loaded here -->
-          </div>
-          
-          <div class="message-input-area">
-            <div class="message-input-container">
-              <textarea id="message-input" placeholder="输入消息..." rows="2"></textarea>
-              <button id="send-message-btn" class="btn-send-message">
-                <i class="fas fa-paper-plane"></i>
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
 
-  <!-- 新建私信模态框 -->
-  <div id="new-message-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>新建私信</h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>收件人用户名:</label>
-          <input type="text" id="recipient-username" placeholder="输入用户名">
-        </div>
-        <div class="form-group">
-          <label>消息内容:</label>
-          <textarea id="new-message-content" placeholder="输入你的消息..." rows="4"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="send-new-message-btn" class="btn-primary">发送</button>
-        <button class="modal-cancel">取消</button>
-      </div>
+  <!-- 右栏 -->
+  <div class="sidebar-right">
+    <div class="info-card">
+      <h3>私信帮助</h3>
+      <ul>
+        <li>点击上方对话列表开始对话</li>
+        <li>使用"新建私信"联系新用户</li>
+        <li>支持实时消息发送</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h3>Today's Weather</h3>
+      <div id="weather">Loading...</div>
+    </div>
+    <div class="info-card">
+      <h3>Quick Links</h3>
+      <a href="https://ntulearn.ntu.edu.sg/" target="_blank" class="quick-link">NTULearn</a>
+      <a href="https://sso.wis.ntu.edu.sg/links/pgstudent.html" target="_blank" class="quick-link">GSlink</a>
     </div>
   </div>
 
-  <script>
-    let currentConversationUser = null;
-    let conversations = [];
+</div>
 
-    document.addEventListener('DOMContentLoaded', function() {
-      loadConversations();
-      bindEvents();
-    });
+<!-- 新建私信模态框 -->
+<div id="new-message-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>新建私信</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>收件人用户名:</label>
+        <input type="text" id="recipient-username" placeholder="输入用户名">
+      </div>
+      <div class="form-group">
+        <label>消息内容:</label>
+        <textarea id="new-message-content" placeholder="输入你的消息..." rows="4"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="send-new-message-btn" class="btn-primary">发送</button>
+      <button class="modal-cancel">取消</button>
+    </div>
+  </div>
+</div>
 
-    function bindEvents() {
-      // 新建私信按钮
-      document.getElementById('new-message-btn').addEventListener('click', () => {
+<script>
+  let currentConversationUser = null;
+  let conversations = [];
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadConversations();
+    bindEvents();
+  });
+
+  function bindEvents() {
+    // 新建私信按钮
+    document.getElementById('new-message-btn').addEventListener('click', () => {
         document.getElementById('new-message-modal').style.display = 'flex';
       });
 
@@ -333,5 +371,7 @@
       return date.toLocaleDateString();
     }
   </script>
+
+<script src="/js/main.js"></script>
 </body>
 </html>

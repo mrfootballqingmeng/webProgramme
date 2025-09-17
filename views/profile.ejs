@@ -2,14 +2,34 @@
 <html>
 <head>
   <title>Profile - <%= profile.username %></title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="/css/style.css">
+  <!-- 图标库 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <div class="profile-container">
-    <a href="/home" class="profile-back">&larr; 返回首页</a>
-    <h2 class="profile-title">用户资料</h2>
+<div class="container">
+
+  <!-- 左栏 -->
+  <div class="sidebar-left">
+    <div class="logo-section">
+      <img src="/images/logo.jpg" class="nav-logo">
+      <h2>NTU NEST</h2>
+    </div>
+    <ul class="nav">
+      <li><a href="/home"><i class="fa fa-home"></i> Home</a></li>
+      <li><a href="/topics"><i class="fa fa-hashtag"></i> Topics</a></li>
+      <li><a href="/my-follows"><i class="fa fa-user-check"></i> My Follow</a></li>
+      <li><a href="/explore"><i class="fa fa-magnifying-glass"></i> Explore</a></li>
+      <li><a href="/notifications"><i class="fa fa-bell"></i> Notifications</a></li>
+      <li><a href="/messages"><i class="fa fa-envelope"></i> Messages</a></li>
+      <li class="active"><i class="fa fa-user"></i> Profile</li>
+      <li><a href="/history"><i class="fa fa-clock-rotate-left"></i> History</a></li>
+    </ul>
+  </div>
+
+  <!-- 中栏 -->
+  <div class="main">
+    <h3 class="section-title">用户资料</h3>
     <div class="profile-header">
       <div class="profile-avatar-wrapper">
         <img class="profile-avatar" src="<%= profile.avatar || '/images/logo.jpg' %>" onerror="this.onerror=null;this.src='/images/logo.jpg'" alt="avatar" />
@@ -62,101 +82,124 @@
     </div>
     <% } %>
   </div>
+
+  <!-- 右栏 -->
+  <div class="sidebar-right">
+    <div class="info-card">
+      <h3>个人资料提示</h3>
+      <ul>
+        <li>完善个人信息提升可信度</li>
+        <li>上传头像让其他用户认识你</li>
+        <li>定期更新个人简介</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h3>Today's Weather</h3>
+      <div id="weather">Loading...</div>
+    </div>
+    <div class="info-card">
+      <h3>Quick Links</h3>
+      <a href="https://ntulearn.ntu.edu.sg/" target="_blank" class="quick-link">NTULearn</a>
+      <a href="https://sso.wis.ntu.edu.sg/" target="_blank" class="quick-link">GSlink</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="/js/main.js"></script>
+<script>
+  // Load user posts when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    loadUserPosts();
+  });
   
-  <script src="/js/main.js"></script>
-  <script>
-    // Load user posts when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-      loadUserPosts();
-    });
-    
-    async function loadUserPosts() {
-      const container = document.getElementById('user-posts-container');
-      try {
-        const response = await fetch('/api/user/posts');
-        const data = await response.json();
-        
-        if (response.ok && data.posts && data.posts.length > 0) {
-          container.innerHTML = '';
-          data.posts.forEach(post => {
-            const postElement = createPostElement(post);
-            container.appendChild(postElement);
-          });
-          // Bind delete functionality
-          bindUserPostsInteractions();
-        } else {
-          container.innerHTML = '<div class="no-posts"><p>还没有发布过帖子</p></div>';
-        }
-      } catch (error) {
-        console.error('Error loading user posts:', error);
-        container.innerHTML = '<div class="error-message">加载失败，请刷新页面重试</div>';
-      }
-    }
-    
-    function createPostElement(post) {
-      const postDiv = document.createElement('div');
-      postDiv.className = 'user-post-card';
-      postDiv.setAttribute('data-post-id', post.id);
+  async function loadUserPosts() {
+    const container = document.getElementById('user-posts-container');
+    try {
+      const response = await fetch('/api/user/posts');
+      const data = await response.json();
       
-      let filesHtml = '';
-      if (post.files && post.files.length > 0) {
-        filesHtml = '<div class="post-images" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">';
-        post.files.forEach(file => {
-          filesHtml += `<img src="${file}" style="max-width:120px;max-height:120px;object-fit:cover;border-radius:6px;" onerror="this.onerror=null;this.src='/images/logo.jpg'" />`;
+      if (response.ok && data.posts && data.posts.length > 0) {
+        container.innerHTML = '';
+        data.posts.forEach(post => {
+          const postElement = createPostElement(post);
+          container.appendChild(postElement);
         });
-        filesHtml += '</div>';
+        // Bind delete functionality
+        bindUserPostsInteractions();
+      } else {
+        container.innerHTML = '<div class="no-posts"><p>还没有发布过帖子</p></div>';
       }
-      
-      postDiv.innerHTML = `
-        <div class="post-header">
-          <span class="post-topic">发布于 ${post.topic_name || '未知话题'}</span>
-          <span class="post-time">${new Date(post.createdAt).toLocaleDateString()}</span>
-        </div>
-        <div class="post-content">
-          <p>${post.content || ''}</p>
-          ${filesHtml}
-        </div>
-        <div class="post-stats">
-          <span>❤️ ${post.likes || 0}</span>
-          <span>💬 ${post.comments || 0}</span>
-          <span>↗️ ${post.shares || 0}</span>
-          <button class="btn-delete-user-post" data-post-id="${post.id}">🗑️ 删除</button>
-        </div>
-      `;
-      
-      return postDiv;
+    } catch (error) {
+      console.error('Error loading user posts:', error);
+      container.innerHTML = '<div class="error-message">加载失败，请刷新页面重试</div>';
     }
+  }
+  
+  function createPostElement(post) {
+    const postDiv = document.createElement('div');
+    postDiv.className = 'user-post-card';
+    postDiv.setAttribute('data-post-id', post.id);
     
-    function bindUserPostsInteractions() {
-      document.querySelectorAll('.btn-delete-user-post').forEach(btn => {
-        if (btn._bound) return;
-        btn._bound = true;
-        btn.addEventListener('click', async () => {
-          const postId = btn.getAttribute('data-post-id');
-          if (!confirm('确定要删除这个帖子吗？删除后无法恢复。')) return;
-          
-          try {
-            const response = await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
-            const data = await response.json();
-            
-            if (response.ok) {
-              const postCard = btn.closest('.user-post-card');
-              if (postCard) {
-                postCard.style.transition = 'opacity 0.3s ease';
-                postCard.style.opacity = '0';
-                setTimeout(() => postCard.remove(), 300);
-              }
-              alert('帖子已删除');
-            } else {
-              alert(data.error || '删除失败');
-            }
-          } catch (error) {
-            console.error('Delete error:', error);
-            alert('删除失败');
-          }
-        });
+    let filesHtml = '';
+    if (post.files && post.files.length > 0) {
+      filesHtml = '<div class="post-images" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">';
+      post.files.forEach(file => {
+        filesHtml += `<img src="${file}" style="max-width:120px;max-height:120px;object-fit:cover;border-radius:6px;" onerror="this.onerror=null;this.src='/images/logo.jpg'" />`;
       });
+      filesHtml += '</div>';
     }
-  </script>
+    
+    postDiv.innerHTML = `
+      <div class="post-header">
+        <span class="post-topic">发布于 ${post.topic_name || '未知话题'}</span>
+        <span class="post-time">${new Date(post.createdAt).toLocaleDateString()}</span>
+      </div>
+      <div class="post-content">
+        <p>${post.content || ''}</p>
+        ${filesHtml}
+      </div>
+      <div class="post-stats">
+        <span>❤️ ${post.likes || 0}</span>
+        <span>💬 ${post.comments || 0}</span>
+        <span>↗️ ${post.shares || 0}</span>
+        <button class="btn-delete-user-post" data-post-id="${post.id}">🗑️ 删除</button>
+      </div>
+    `;
+    
+    return postDiv;
+  }
+  
+  function bindUserPostsInteractions() {
+    document.querySelectorAll('.btn-delete-user-post').forEach(btn => {
+      if (btn._bound) return;
+      btn._bound = true;
+      btn.addEventListener('click', async () => {
+        const postId = btn.getAttribute('data-post-id');
+        if (!confirm('确定要删除这个帖子吗？删除后无法恢复。')) return;
+        
+        try {
+          const response = await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
+          const data = await response.json();
+          
+          if (response.ok) {
+            const postCard = btn.closest('.user-post-card');
+            if (postCard) {
+              postCard.style.transition = 'opacity 0.3s ease';
+              postCard.style.opacity = '0';
+              setTimeout(() => postCard.remove(), 300);
+            }
+            alert('帖子已删除');
+          } else {
+            alert(data.error || '删除失败');
+          }
+        } catch (error) {
+          console.error('Delete error:', error);
+          alert('删除失败');
+        }
+      });
+    });
+  }
+</script>
 </body>
 </html>
