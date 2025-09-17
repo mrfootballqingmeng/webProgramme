@@ -30,7 +30,9 @@ async function setupDatabase() {
         await connection.query(`USE ${process.env.DB_NAME || 'qzrdb'}`);
 
         // 删除现有表（按依赖顺序）
-        await connection.query('DROP TABLE IF EXISTS messages');
+         await connection.query('DROP TABLE IF EXISTS messages');
+         await connection.query('DROP TABLE IF EXISTS notifications');
+    await connection.query('DROP TABLE IF EXISTS follows');
         await connection.query('DROP TABLE IF EXISTS shares');
         await connection.query('DROP TABLE IF EXISTS comments');
         await connection.query('DROP TABLE IF EXISTS likes');
@@ -141,6 +143,37 @@ async function setupDatabase() {
                 FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
                 INDEX idx_receiver_created (receiver_id, created_at),
                 INDEX idx_sender_created (sender_id, created_at)
+            ) ENGINE=InnoDB
+        `);
+
+            // 创建通知表（中文注释）：记录系统通知、关注通知、发帖提醒
+            await connection.query(`
+                CREATE TABLE notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,           -- 接收者
+                    actor_id INT NULL,              -- 触发者（例如关注者/发帖者）
+                    post_id INT NULL,               -- 关联帖子
+                    type ENUM('system','follow','post') NOT NULL,
+                    content VARCHAR(255) NULL,
+                    is_read BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL,
+                    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE SET NULL,
+                    INDEX idx_user_created (user_id, created_at)
+                ) ENGINE=InnoDB
+            `);
+
+        // 创建关注关系表（中文注释）：用于存储用户之间的关注/被关注关系
+        await connection.query(`
+            CREATE TABLE follows (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                follower_id INT NOT NULL,
+                followee_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY ux_follow (follower_id, followee_id),
+                FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (followee_id) REFERENCES users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB
         `);
         

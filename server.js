@@ -32,17 +32,76 @@ const db = mysql.createConnection({
 });
 
 db.connect(err => {
-    if (err) {
-        console.error("❌ MySQL connection failed:", err.message);
-        console.log("💡 请先运行: node setup-database.js");
-        process.exit(1);
-    }
-    console.log("✅ MySQL connected");
+  if (err) {
+    console.error("❌ MySQL connection failed:", err.message);
+    console.log("💡 请先运行: node setup-database.js");
+    process.exit(1);
+  }
+  console.log("✅ MySQL connected");
+
+  // 中文注释：应用启动时自动创建关注表，避免环境未初始化导致的错误
+  const createFollowsSql = `
+        CREATE TABLE IF NOT EXISTS follows (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            follower_id INT NOT NULL,
+            followee_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY ux_follow (follower_id, followee_id),
+            FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (followee_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB`;
+  db.query(createFollowsSql, (fErr) => {
+    if (fErr) console.error('创建 follows 表失败:', fErr.message);
+    else console.log('✅ follows 表就绪');
+  });
+
+  // 中文注释：确保通知表存在
+  const createNotificationsSql = `
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            actor_id INT NULL,
+            post_id INT NULL,
+            type ENUM('system','follow','post') NOT NULL,
+            content VARCHAR(255) NULL,
+            is_read BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL,
+            FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE SET NULL,
+            INDEX idx_user_created (user_id, created_at)
+        ) ENGINE=InnoDB`;
+  db.query(createNotificationsSql, (nErr) => {
+    if (nErr) console.error('创建 notifications 表失败:', nErr.message);
+    else console.log('✅ notifications 表就绪');
+  });
+
+    // 中文注释：确保 events（日历事件）表存在
+    const createEventsSql = `
+                CREATE TABLE IF NOT EXISTS events (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        user_id INT NOT NULL,
+                        title VARCHAR(200) NOT NULL,
+                        start_time DATETIME NOT NULL,
+                        end_time DATETIME NULL,
+                        location VARCHAR(200) NULL,
+                        notes TEXT NULL,
+                        remind_minutes INT DEFAULT 60,
+                        reminded BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        INDEX idx_user_start (user_id, start_time)
+                ) ENGINE=InnoDB`;
+    db.query(createEventsSql, (eErr) => {
+        if (eErr) console.error('创建 events 表失败:', eErr.message);
+        else console.log('✅ events 表就绪');
+    });
 });
 
 
 // 中间件
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -68,6 +127,74 @@ const upload = multer({storage: storage});
 // ===== 初始化模块路由 =====
 initMetaMaskRoutes(app, db, express);
 initSearchRoutes(app, db);
+
+// Explore 页面（中文注释）：提供统一检索用户与帖子
+app.get('/explore', (req, res) => {
+    res.render('explore', { user: req.session.user || null });
+});
+
+// ========== Calendar / Events APIs ==========
+// 获取当前用户的事件（按开始时间升序，仅未来30天）
+app.get('/api/events', (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+    const uid = req.session.user.id;
+    const sql = `SELECT id, title, start_time, end_time, location, notes, remind_minutes, reminded
+                             FROM events
+                             WHERE user_id = ? AND start_time >= NOW() AND start_time <= DATE_ADD(NOW(), INTERVAL 30 DAY)
+                             ORDER BY start_time ASC`;
+    db.query(sql, [uid], (err, rows=[]) => {
+        if (err) return res.status(500).json({ error: 'DB error' });
+        res.json({ events: rows });
+    });
+});
+
+// 新建事件（支持 JSON 或表单）
+app.post('/api/events', (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+    const uid = req.session.user.id;
+    const { title, start_time, end_time, location, notes, remind_minutes } = req.body || {};
+    if (!title || !start_time) return res.status(400).json({ error: 'Missing title or start_time' });
+    const rm = parseInt(remind_minutes, 10);
+    const rmVal = Number.isFinite(rm) && rm >= 0 ? rm : 60;
+    const sql = `INSERT INTO events (user_id, title, start_time, end_time, location, notes, remind_minutes)
+                             VALUES (?,?,?,?,?,?,?)`;
+    db.query(sql, [uid, title.trim(), new Date(start_time), end_time? new Date(end_time): null, location || null, notes || null, rmVal], (err, result) => {
+        if (err) return res.status(500).json({ error: 'DB error' });
+        res.json({ success: true, id: result.insertId });
+    });
+});
+
+// 删除事件
+app.delete('/api/events/:id', (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+    const uid = req.session.user.id;
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Bad id' });
+    db.query('DELETE FROM events WHERE id = ? AND user_id = ?', [id, uid], (err, r) => {
+        if (err) return res.status(500).json({ error: 'DB error' });
+        res.json({ success: true, removed: (r && r.affectedRows) || 0 });
+    });
+});
+
+// 简单的提醒调度（每分钟检查一次）（中文注释）
+setInterval(() => {
+    const q = `SELECT id, user_id, title, start_time, remind_minutes
+                         FROM events
+                         WHERE reminded = FALSE
+                         AND TIMESTAMPDIFF(MINUTE, NOW(), start_time) BETWEEN remind_minutes AND remind_minutes+1`;
+    db.query(q, [], (err, rows=[]) => {
+        if (err || !rows.length) return;
+        const ids = [];
+        rows.forEach(ev => {
+            const msg = `您的事件「${ev.title}」将在${ev.remind_minutes}分钟后开始`;
+            db.query('INSERT INTO notifications (user_id, actor_id, type, content) VALUES (?, NULL, "system", ?)', [ev.user_id, msg], ()=>{});
+            ids.push(ev.id);
+        });
+        if (ids.length){
+            db.query('UPDATE events SET reminded = TRUE WHERE id IN ('+ ids.map(()=>'?').join(',') +')', ids, ()=>{});
+        }
+    });
+}, 60 * 1000);
 
 // ===== Drafts APIs =====
 // 获取当前用户草稿列表
@@ -148,6 +275,8 @@ app.post('/api/drafts/:id/publish', (req, res) => {
                     // 删除草稿
                     db.query('DELETE FROM drafts WHERE id = ?', [id], () => {
                     });
+                    // 中文注释：发布草稿为帖子后，通知粉丝
+                    try { if (insertRes && insertRes.insertId) notifyFollowersOnPost(db, req.session.user.id, insertRes.insertId); } catch(e) {}
                     res.json({success: true, post_id: insertRes.insertId});
                 });
             };
@@ -171,20 +300,33 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-    const {username, password} = req.body;
-    const sql = "SELECT * FROM users WHERE username = ?";
-    db.query(sql, [username], async (err, result) => {
-        if (err) throw err;
-        if (result.length === 0) return res.send("❌ 用户不存在");
-        const user = result[0];
-        const match = await bcrypt.compare(password, user.password);
-        if (match) {
-            req.session.user = user;
-            res.redirect("/home");
-        } else {
-            res.send("❌ 密码错误");
+  const { username, password } = req.body;
+  const sql = "SELECT * FROM users WHERE username = ?";
+  db.query(sql, [username], async (err, result) => {
+    if (err) throw err;
+    if (result.length === 0) return res.send("❌ 用户不存在");
+    const user = result[0];
+    const match = await bcrypt.compare(password, user.password);
+    if (match) {
+      req.session.user = user;
+      // 中文注释：若没有欢迎通知，插入一条系统欢迎通知
+      db.query(
+        "SELECT id FROM notifications WHERE user_id=? AND type='system' AND content LIKE '欢迎%'",
+        [user.id],
+        (qErr, rows) => {
+          if (!qErr && (!rows || rows.length === 0)) {
+            db.query(
+              "INSERT INTO notifications (user_id, type, content) VALUES (?, 'system', ?)",
+              [user.id, `欢迎 ${user.username} 加入 NTU NEST！`]
+            );
+          }
         }
-    });
+      );
+      res.redirect("/home");
+    } else {
+      res.send("❌ 密码错误");
+    }
+  });
 });
 
 app.post("/register", async (req, res) => {
@@ -249,6 +391,8 @@ app.post('/api/posts', upload.array('files'), (req, res) => {
         const topicId = (rows && rows[0]) ? rows[0].id : 1;
         db.query('INSERT INTO posts (user_id, topic_id, content, media_paths) VALUES (?, ?, ?, ?)', [req.session.user.id, topicId, content, mediaPathsJson], (iErr, insertRes) => {
             if (iErr) return res.status(500).json({error: 'Insert failed'});
+            // 中文注释：发帖成功后通知粉丝
+            try { if (insertRes && insertRes.insertId) notifyFollowersOnPost(db, req.session.user.id, insertRes.insertId); } catch(e) {}
             return res.json({success: true, id: insertRes.insertId, files});
         });
     });
@@ -489,11 +633,13 @@ app.post("/home/post", upload.array("files"), (req, res) => {
     db.query(
         "INSERT INTO posts (user_id, topic_id, content, media_paths) VALUES (?, ?, ?, ?)",
         [req.session.user.id, topic_id, content, mediaPathsJson],
-        (err) => {
+        (err, result) => {
             if (err) {
                 console.error(err);
                 return res.send("❌ 发帖失败");
             }
+            // 中文注释：发帖成功后通知粉丝
+            try { if (result && result.insertId) notifyFollowersOnPost(db, req.session.user.id, result.insertId); } catch(e) {}
             res.redirect("/home");
         }
     );
@@ -532,11 +678,13 @@ app.post("/topic/:name/post", upload.array("files"), (req, res) => {
         db.query(
             "INSERT INTO posts (user_id, topic_id, content, media_paths) VALUES (?, ?, ?, ?)",
             [req.session.user.id, topic.id, content, mediaPathsJson],
-            (err) => {
+            (err, result) => {
                 if (err) {
                     console.error(err);
                     return res.send("❌ 发帖失败");
                 }
+                // 中文注释：发帖成功后通知粉丝
+                try { if (result && result.insertId) notifyFollowersOnPost(db, req.session.user.id, result.insertId); } catch(e) {}
                 res.redirect("/topic/" + topicName);
             }
         );
@@ -714,6 +862,113 @@ app.post('/api/messages/send-to-username', express.json(), (req, res) => {
     });
 });
 
+// ========== 用户关注相关 API ==========
+// 获取用户简介 + 关注状态（当前登录用户是否已关注）
+app.get('/api/users/:id/summary', (req, res) => {
+    const targetId = parseInt(req.params.id, 10);
+    if (!targetId) return res.status(400).json({error: 'Bad user id'});
+
+    // 中文注释：允许未登录用户查看简介，但 follow 状态仅在登录时返回
+    const currentId = req.session.user ? req.session.user.id : null;
+
+    const profileSql = 'SELECT id, username, display_name, avatar, bio, created_at FROM users WHERE id = ?';
+    db.query(profileSql, [targetId], (pErr, pRows) => {
+        if (pErr) return res.status(500).json({error: 'DB error'});
+        if (!pRows || pRows.length === 0) return res.status(404).json({error: 'User not found'});
+
+        const profile = pRows[0];
+        // 同时查询粉丝数与关注数
+        const countsSql = `
+            SELECT 
+              (SELECT COUNT(*) FROM follows WHERE followee_id = ?) AS followers,
+              (SELECT COUNT(*) FROM follows WHERE follower_id = ?) AS following
+        `;
+        db.query(countsSql, [targetId, targetId], (cErr, cRows) => {
+            if (cErr) return res.status(500).json({error: 'DB error'});
+            const counts = cRows && cRows[0] ? cRows[0] : {followers: 0, following: 0};
+
+            // 若已登录，查询是否已关注
+            if (currentId) {
+                db.query('SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ? LIMIT 1', [currentId, targetId], (fErr, fRows) => {
+                    if (fErr) return res.status(500).json({error: 'DB error'});
+                    const isFollowing = !!(fRows && fRows.length);
+                    return res.json({
+                        profile,
+                        followers: counts.followers || 0,
+                        following: counts.following || 0,
+                        isFollowing,
+                        isSelf: currentId === targetId
+                    });
+                });
+            } else {
+                // 未登录时不返回 isFollowing
+                return res.json({
+                    profile,
+                    followers: counts.followers || 0,
+                    following: counts.following || 0,
+                    isFollowing: false,
+                    isSelf: false
+                });
+            }
+        });
+    });
+});
+
+// 关注用户
+app.post('/api/users/:id/follow', (req, res) => {
+  if (!req.session.user) return res.status(401).json({error: 'Login required'});
+  const followerId = req.session.user.id;
+  const followeeId = parseInt(req.params.id, 10);
+  if (!followeeId || followeeId === followerId) return res.status(400).json({error: 'Invalid target'});
+
+  db.query('SELECT id FROM users WHERE id = ?', [followeeId], (uErr, uRows) => {
+    if (uErr) return res.status(500).json({error: 'DB error'});
+    if (!uRows || uRows.length === 0) return res.status(404).json({error: 'User not found'});
+    db.query('INSERT IGNORE INTO follows (follower_id, followee_id) VALUES (?, ?)', [followerId, followeeId], (iErr, iRes) => {
+      if (iErr) return res.status(500).json({error: 'DB error'});
+      // 只有当确实新插入时提醒被关注者
+      if (iRes && iRes.affectedRows > 0) {
+        db.query('INSERT INTO notifications (user_id, actor_id, type, content) VALUES (?, ?, "follow", ?)', [followeeId, followerId, '有人关注了你'], ()=>{});
+      }
+      return res.json({success: true});
+    });
+  });
+});
+
+// 取关用户（DELETE）
+// 中文注释：需要登录；从 follows 表删除当前用户对目标用户的关注关系。
+app.delete('/api/users/:id/follow', (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: 'Login required' });
+    const followerId = req.session.user.id;
+    const followeeId = parseInt(req.params.id, 10);
+    if (!followeeId || followeeId === followerId) return res.status(400).json({ error: 'Invalid target' });
+
+    db.query('DELETE FROM follows WHERE follower_id = ? AND followee_id = ?', [followerId, followeeId], (dErr, dRes) => {
+        if (dErr) return res.status(500).json({ error: 'DB error' });
+        // 中文注释：即使未删除任何行也返回成功，保证幂等
+        return res.json({ success: true, removed: (dRes && dRes.affectedRows) || 0 });
+    });
+});
+
+// 在发帖成功后提醒粉丝（封装复用）
+function notifyFollowersOnPost(db, authorId, postId) {
+  // 中文注释：把作者的所有粉丝取出，为每个粉丝插入一条“post”通知
+  const q = 'SELECT follower_id FROM follows WHERE followee_id = ?';
+  db.query(q, [authorId], (e, rows) => {
+    if (e || !rows || rows.length === 0) return;
+    const values = rows.map(r => [r.follower_id, authorId, postId, 'post', null]);
+    // 批量插入
+    db.query('INSERT INTO notifications (user_id, actor_id, post_id, type, content) VALUES ?',[values], ()=>{});
+  });
+}
+
+// 在多个发帖入口后追加通知逻辑
+// 1) /home/post
+// 覆盖 home 发帖接口：调用原逻辑后加入通知
+// 注：保留原参数与行为，仅在成功后追加通知
+// 为避免重复展示完整函数，这里直接在成功回调中调用 notifyFollowersOnPost（已在原文件中）
+// 已在原有 /home/post 处理函数中定位到 res.redirect("/home") 前追加调用
+
 // ========== 用户资料 ==========
 app.get('/profile', (req, res) => {
     if (!req.session.user) return res.redirect('/');
@@ -741,22 +996,10 @@ app.post('/profile', upload.single('avatar'), (req, res) => {
     const avatarPath = req.file ? '/uploads/' + req.file.filename : null;
     const updates = [];
     const params = [];
-    if (username) {
-        updates.push('username = ?');
-        params.push(username);
-    }
-    if (display_name) {
-        updates.push('display_name = ?');
-        params.push(display_name);
-    }
-    if (bio) {
-        updates.push('bio = ?');
-        params.push(bio);
-    }
-    if (avatarPath) {
-        updates.push('avatar = ?');
-        params.push(avatarPath);
-    }
+    if (username) { updates.push('username = ?'); params.push(username); }
+    if (display_name) { updates.push('display_name = ?'); params.push(display_name); }
+    if (bio) { updates.push('bio = ?'); params.push(bio); }
+    if (avatarPath) { updates.push('avatar = ?'); params.push(avatarPath); }
     if (updates.length === 0) return res.redirect('/profile');
     params.push(id);
     db.query('UPDATE users SET ' + updates.join(', ') + ' WHERE id = ?', params, (err) => {
@@ -792,7 +1035,7 @@ app.post('/profile/change-password', (req, res) => {
                 if (uErr) return res.status(500).send('❌ 修改失败');
                 req.session.destroy(() => {
                     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-                    res.render("refresh");
+                    res.render('refresh');
                 });
             });
         } catch (e) {
@@ -800,6 +1043,97 @@ app.post('/profile/change-password', (req, res) => {
             return res.status(500).send('❌ 内部错误');
         }
     });
+});
+
+// ========== 通知页面与相关 API ==========
+// 中文注释：进入通知页后自动标记为已读
+app.get('/notifications', (req, res) => {
+    if (!req.session.user) return res.redirect('/');
+    const uid = req.session.user.id;
+    const sql = `
+        SELECT n.*, a.username AS actor_username
+        FROM notifications n
+        LEFT JOIN users a ON n.actor_id = a.id
+        WHERE n.user_id = ?
+        ORDER BY n.created_at DESC LIMIT 100`;
+    db.query(sql, [uid], (err, rows) => {
+        if (err) return res.status(500).send('DB error');
+        db.query('UPDATE notifications SET is_read = TRUE WHERE user_id = ? AND is_read = FALSE', [uid], ()=>{});
+        res.render('notifications', { user: req.session.user, notifications: rows || [] });
+    });
+});
+
+// ========== 历史记录（History） ==========
+// 中文注释：展示当前登录用户的历史行为（发帖、点赞、评论、分享、关注）
+app.get('/history', (req, res) => {
+        if (!req.session.user) return res.redirect('/');
+        const uid = req.session.user.id;
+
+        // 聚合查询：分别取各类事件并在内存中合并排序（简化实现）
+        const qPosts = `SELECT 'post' AS type, p.id AS ref_id, p.created_at, p.content AS extra, NULL AS extra2 FROM posts p WHERE p.user_id = ?`;
+        const qLikes = `SELECT 'like' AS type, l.post_id AS ref_id, l.created_at, NULL AS extra, NULL AS extra2 FROM likes l WHERE l.user_id = ?`;
+        const qComments = `SELECT 'comment' AS type, c.post_id AS ref_id, c.created_at, c.content AS extra, NULL AS extra2 FROM comments c WHERE c.user_id = ?`;
+        const qShares = `SELECT 'share' AS type, s.post_id AS ref_id, s.created_at, NULL AS extra, NULL AS extra2 FROM shares s WHERE s.user_id = ?`;
+        const qFollows = `SELECT 'follow' AS type, f.followee_id AS ref_id, f.created_at, u.username AS extra, u.display_name AS extra2 FROM follows f JOIN users u ON u.id = f.followee_id WHERE f.follower_id = ?`;
+
+        // 依次查询并合并
+        db.query(qPosts, [uid], (e1, r1=[]) => {
+            if (e1) return res.status(500).send('DB error');
+            db.query(qLikes, [uid], (e2, r2=[]) => {
+                if (e2) return res.status(500).send('DB error');
+                db.query(qComments, [uid], (e3, r3=[]) => {
+                    if (e3) return res.status(500).send('DB error');
+                    db.query(qShares, [uid], (e4, r4=[]) => {
+                        if (e4) return res.status(500).send('DB error');
+                        db.query(qFollows, [uid], (e5, r5=[]) => {
+                            if (e5) return res.status(500).send('DB error');
+                            const timeline = [...r1, ...r2, ...r3, ...r4, ...r5]
+                                .map(it => ({...it, created_at: new Date(it.created_at)}))
+                                .sort((a,b) => b.created_at - a.created_at)
+                                .slice(0, 200);
+                            res.render('history', { user: req.session.user, timeline });
+                        });
+                    });
+                });
+            });
+        });
+});
+
+// 将全部通知标记为已读
+app.post('/api/notifications/read-all', (req, res) => {
+    if (!req.session.user) return res.status(401).json({error:'Login required'});
+    const uid = req.session.user.id;
+    db.query('UPDATE notifications SET is_read = TRUE WHERE user_id = ?', [uid], (err)=>{
+        if (err) return res.status(500).json({error:'DB error'});
+        res.json({success:true});
+    });
+});
+
+// ========== 我关注的人（My Follows） ==========
+// 中文注释：显示当前登录用户关注的用户列表
+app.get('/my-follows', (req, res) => {
+    if (!req.session.user) return res.redirect('/');
+    const uid = req.session.user.id;
+    const sql = `
+        SELECT u.id, u.username, u.display_name, u.avatar, u.bio, u.created_at
+        FROM follows f JOIN users u ON u.id = f.followee_id
+        WHERE f.follower_id = ?
+        ORDER BY f.created_at DESC`;
+    db.query(sql, [uid], (err, rows) => {
+        if (err) return res.status(500).send('DB error');
+        res.render('follows', { user: req.session.user, follows: rows || [] });
+    });
+});
+
+// ========== 法律页（中文注释） ==========
+app.get('/terms', (req, res) => {
+    res.render('terms', { user: req.session.user || null });
+});
+app.get('/privacy', (req, res) => {
+    res.render('privacy', { user: req.session.user || null });
+});
+app.get('/cookies', (req, res) => {
+    res.render('cookies', { user: req.session.user || null });
 });
 
 app.listen(PORT, () => {
