@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if (btn._bound) return; btn._bound=true;
       btn.addEventListener('click', async ()=>{
         const id = btn.getAttribute('data-post-id');
-        if (!confirm('确定要删除这个帖子吗？删除后无法恢复。')) return;
+        if (!confirm('sure to delete?')) return;
         try {
           const res = await fetch('/api/posts/'+encodeURIComponent(id), { method:'DELETE' });
           const j = await res.json();
