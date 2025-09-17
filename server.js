@@ -254,6 +254,43 @@ app.post('/api/posts', upload.array('files'), (req, res) => {
     });
 });
 
+// Delete post API
+app.delete('/api/posts/:id', (req, res) => {
+    if (!req.session.user) return res.status(401).json({error: 'Login required'});
+    const postId = parseInt(req.params.id, 10);
+    const userId = req.session.user.id;
+    
+    // First check if the post exists and belongs to the current user
+    db.query('SELECT user_id FROM posts WHERE id = ?', [postId], (err, rows) => {
+        if (err) return res.status(500).json({error: 'DB error'});
+        if (!rows || rows.length === 0) return res.status(404).json({error: 'Post not found'});
+        
+        const post = rows[0];
+        if (post.user_id !== userId) return res.status(403).json({error: 'Not authorized to delete this post'});
+        
+        // Delete related data first (comments, likes, shares)
+        db.query('DELETE FROM comments WHERE post_id = ?', [postId], (cErr) => {
+            if (cErr) console.error('Error deleting comments:', cErr);
+            
+            db.query('DELETE FROM likes WHERE post_id = ?', [postId], (lErr) => {
+                if (lErr) console.error('Error deleting likes:', lErr);
+                
+                db.query('DELETE FROM shares WHERE post_id = ?', [postId], (sErr) => {
+                    if (sErr) console.error('Error deleting shares:', sErr);
+                    
+                    // Finally delete the post
+                    db.query('DELETE FROM posts WHERE id = ?', [postId], (pErr, result) => {
+                        if (pErr) return res.status(500).json({error: 'Failed to delete post'});
+                        if (result.affectedRows === 0) return res.status(404).json({error: 'Post not found'});
+                        
+                        res.json({success: true, message: 'Post deleted successfully'});
+                    });
+                });
+            });
+        });
+    });
+});
+
 
 
 

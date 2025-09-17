@@ -129,6 +129,29 @@ document.addEventListener('DOMContentLoaded', ()=>{
         } catch(e){ console.error(e); alert('Comment failed'); }
       });
     });
+    document.querySelectorAll('.btn-delete').forEach(btn=>{
+      if (btn._bound) return; btn._bound=true;
+      btn.addEventListener('click', async ()=>{
+        const id = btn.getAttribute('data-post-id');
+        if (!confirm('确定要删除这个帖子吗？删除后无法恢复。')) return;
+        try {
+          const res = await fetch('/api/posts/'+encodeURIComponent(id), { method:'DELETE' });
+          const j = await res.json();
+          if (res.ok){
+            // Remove the post card from the DOM
+            const postCard = btn.closest('.post-card');
+            if (postCard) {
+              postCard.style.transition = 'opacity 0.3s ease';
+              postCard.style.opacity = '0';
+              setTimeout(() => postCard.remove(), 300);
+            }
+            alert('帖子已删除');
+          } else {
+            alert(j.error || '删除失败');
+          }
+        } catch(e){ console.error(e); alert('删除失败'); }
+      });
+    });
   }
   bindInteractions();
 

@@ -81,10 +81,13 @@
                 </div>
               <% } %>
             </div>
-            <div class="post-actions" style="margin-top:8px;display:flex;gap:10px;">
+            <div class="post-actions" style="margin-top:8px;display:flex;gap:10px;align-items:center;">
               <button class="btn-like" data-post-id="<%= post.id %>">❤️ <span class="like-count"><%= post.likes || 0 %></span></button>
               <button class="btn-comment-toggle" data-post-id="<%= post.id %>">💬 <span class="comment-count"><%= post.comments || 0 %></span></button>
               <button class="btn-share" data-post-id="<%= post.id %>">↗️ <span class="share-count"><%= post.shares || 0 %></span></button>
+              <% if (user && user.id === post.user_id) { %>
+                <button class="btn-delete" data-post-id="<%= post.id %>" style="margin-left:auto;">🗑️ 删除</button>
+              <% } %>
             </div>
             <div class="comments-section" data-post-id="<%= post.id %>" style="display:none;margin-top:6px;">
               <div class="existing-comments" style="font-size:14px;">
