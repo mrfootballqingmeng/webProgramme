@@ -508,7 +508,7 @@ app.post('/api/posts/:id/like', (req, res) => {
 });
 
 // comment
-app.post('/api/posts/:id/comment', express.json(), (req, res) => {
+app.post('/api/posts/:id/comment', (req, res) => {
     if (!req.session.user) return res.status(401).json({error: 'Login required'});
     const postId = parseInt(req.params.id, 10), userId = req.session.user.id;
     const content = (req.body.content || '').trim();
