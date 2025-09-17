@@ -549,6 +549,171 @@ app.get("/logout", (req, res) => {
     res.redirect("/");
 });
 
+// ========== 私信功能 ==========
+app.get("/messages", (req, res) => {
+    if (!req.session.user) return res.redirect("/");
+    res.render("messages", {user: req.session.user});
+});
+
+// 获取对话列表
+app.get('/api/messages/conversations', (req, res) => {
+    if (!req.session.user) return res.status(401).json({error: 'Login required'});
+    const userId = req.session.user.id;
+    
+    // 先获取所有对话的用户ID
+    const conversationsQuery = `
+        SELECT DISTINCT
+            CASE 
+                WHEN m.sender_id = ? THEN m.receiver_id 
+                ELSE m.sender_id 
+            END as user_id
+        FROM messages m
+        WHERE m.sender_id = ? OR m.receiver_id = ?
+    `;
+    
+    console.log('Loading conversations for user:', userId);
+    
+    db.query(conversationsQuery, [userId, userId, userId], (err, conversationRows) => {
+        if (err) {
+            console.error('Database error in conversations query:', err);
+            return res.status(500).json({error: 'DB error'});
+        }
+        
+        if (!conversationRows || conversationRows.length === 0) {
+            return res.json({conversations: []});
+        }
+        
+        // 为每个对话获取详细信息
+        const conversations = [];
+        let completed = 0;
+        
+        conversationRows.forEach(conv => {
+            const detailQuery = `
+                SELECT 
+                    u.id as user_id,
+                    u.username,
+                    u.avatar,
+                    (SELECT content FROM messages 
+                     WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+                     ORDER BY created_at DESC LIMIT 1) as last_message,
+                    (SELECT created_at FROM messages 
+                     WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+                     ORDER BY created_at DESC LIMIT 1) as last_message_time,
+                    (SELECT COUNT(*) FROM messages 
+                     WHERE receiver_id = ? AND sender_id = ? AND is_read = FALSE) as unread_count
+                FROM users u
+                WHERE u.id = ?
+            `;
+            
+            db.query(detailQuery, [userId, conv.user_id, conv.user_id, userId, userId, conv.user_id, conv.user_id, userId, userId, conv.user_id, conv.user_id], (detailErr, detailRows) => {
+                completed++;
+                
+                if (!detailErr && detailRows && detailRows.length > 0) {
+                    conversations.push(detailRows[0]);
+                }
+                
+                if (completed === conversationRows.length) {
+                    // 按最后消息时间排序
+                    conversations.sort((a, b) => new Date(b.last_message_time) - new Date(a.last_message_time));
+                    console.log('Conversations result:', conversations);
+                    res.json({conversations: conversations});
+                }
+            });
+        });
+    });
+});
+
+// 获取与特定用户的对话消息
+app.get('/api/messages/conversation/:userId', (req, res) => {
+    if (!req.session.user) return res.status(401).json({error: 'Login required'});
+    const currentUserId = req.session.user.id;
+    const otherUserId = parseInt(req.params.userId, 10);
+    
+    const sql = `
+        SELECT m.*, 
+               CASE WHEN m.sender_id = ? THEN TRUE ELSE FALSE END as is_sender
+        FROM messages m
+        WHERE (m.sender_id = ? AND m.receiver_id = ?) 
+           OR (m.sender_id = ? AND m.receiver_id = ?)
+        ORDER BY m.created_at ASC
+    `;
+    
+    console.log('Loading messages between users:', currentUserId, 'and', otherUserId);
+    console.log('SQL query:', sql);
+    console.log('SQL params:', [currentUserId, currentUserId, otherUserId, otherUserId, currentUserId]);
+    
+    db.query(sql, [currentUserId, currentUserId, otherUserId, otherUserId, currentUserId], (err, rows) => {
+        if (err) {
+            console.error('Database error in messages query:', err);
+            return res.status(500).json({error: 'DB error'});
+        }
+        
+        console.log('Messages query result:', rows);
+        
+        // 标记消息为已读
+        db.query('UPDATE messages SET is_read = TRUE WHERE sender_id = ? AND receiver_id = ? AND is_read = FALSE', 
+                [otherUserId, currentUserId], (updateErr) => {
+            if (updateErr) console.error('Error marking messages as read:', updateErr);
+        });
+        
+        res.json({messages: rows || []});
+    });
+});
+
+// 发送消息（通过用户ID）
+app.post('/api/messages/send', express.json(), (req, res) => {
+    if (!req.session.user) return res.status(401).json({error: 'Login required'});
+    const senderId = req.session.user.id;
+    const {receiver_id, content} = req.body;
+    
+    if (!receiver_id || !content || !content.trim()) {
+        return res.status(400).json({error: 'Receiver ID and content are required'});
+    }
+    
+    // 检查接收者是否存在
+    db.query('SELECT id FROM users WHERE id = ?', [receiver_id], (err, rows) => {
+        if (err) return res.status(500).json({error: 'DB error'});
+        if (!rows || rows.length === 0) return res.status(404).json({error: 'Receiver not found'});
+        
+        // 插入消息
+        db.query('INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)', 
+                [senderId, receiver_id, content.trim()], (insertErr, result) => {
+            if (insertErr) return res.status(500).json({error: 'Failed to send message'});
+            res.json({success: true, message_id: result.insertId});
+        });
+    });
+});
+
+// 发送消息（通过用户名）
+app.post('/api/messages/send-to-username', express.json(), (req, res) => {
+    if (!req.session.user) return res.status(401).json({error: 'Login required'});
+    const senderId = req.session.user.id;
+    const {username, content} = req.body;
+    
+    if (!username || !content || !content.trim()) {
+        return res.status(400).json({error: 'Username and content are required'});
+    }
+    
+    // 查找接收者
+    db.query('SELECT id FROM users WHERE username = ?', [username], (err, rows) => {
+        if (err) return res.status(500).json({error: 'DB error'});
+        if (!rows || rows.length === 0) return res.status(404).json({error: 'User not found'});
+        
+        const receiverId = rows[0].id;
+        
+        if (receiverId === senderId) {
+            return res.status(400).json({error: 'Cannot send message to yourself'});
+        }
+        
+        // 插入消息
+        db.query('INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)', 
+                [senderId, receiverId, content.trim()], (insertErr, result) => {
+            if (insertErr) return res.status(500).json({error: 'Failed to send message'});
+            res.json({success: true, message_id: result.insertId});
+        });
+    });
+});
+
 // ========== 用户资料 ==========
 app.get('/profile', (req, res) => {
     if (!req.session.user) return res.redirect('/');

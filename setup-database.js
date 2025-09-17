@@ -30,6 +30,7 @@ async function setupDatabase() {
         await connection.query(`USE ${process.env.DB_NAME || 'qzrdb'}`);
 
         // 删除现有表（按依赖顺序）
+        await connection.query('DROP TABLE IF EXISTS messages');
         await connection.query('DROP TABLE IF EXISTS shares');
         await connection.query('DROP TABLE IF EXISTS comments');
         await connection.query('DROP TABLE IF EXISTS likes');
@@ -126,6 +127,22 @@ async function setupDatabase() {
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB
         `);
+
+        // 创建私信表
+        await connection.query(`
+            CREATE TABLE messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sender_id INT NOT NULL,
+                receiver_id INT NOT NULL,
+                content TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_receiver_created (receiver_id, created_at),
+                INDEX idx_sender_created (sender_id, created_at)
+            ) ENGINE=InnoDB
+        `);
         
         // 插入默认话题
         await connection.query(`
@@ -152,6 +169,7 @@ async function setupDatabase() {
         console.log('- comments (评论表)');
         console.log('- shares (分享表)');
         console.log('- drafts (草稿表)');
+        console.log('- messages (私信表)');
         console.log('');
         console.log('🏷️ 插入的默认话题：');
         console.log('- trade: Second-hand Trading');
