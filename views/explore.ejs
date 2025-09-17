@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>NTU NEST - Explore</title>
   <link rel="stylesheet" href="/css/style.css">
@@ -29,7 +29,7 @@
   <div class="main">
     <h3 class="section-title">Explore</h3>
     <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
-      <input id="q" placeholder="搜索用户或帖子..." style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
+      <input id="q" placeholder="Search users or posts..." style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
       <select id="type" style="padding:8px; border:1px solid #ddd; border-radius:6px;">
         <option value="all">All</option>
         <option value="users">Users</option>
@@ -48,7 +48,7 @@
   <div class="sidebar-right">
     <div class="info-card">
       <h3>Tips</h3>
-      <p>按 All 同时搜索用户和帖子；点击用户名可打开用户卡片。</p>
+  <p>Use the "All" option to search both users and posts; click a username to open the user card.</p>
     </div>
   </div>
 </div>
@@ -71,7 +71,7 @@ async function runSearch(){
           <div style="color:#6b7280;font-size:12px;">@${u.username}</div>
           ${u.bio?`<div style="color:#374151;font-size:13px;margin-top:4px;">${u.bio}</div>`:''}
         </div>
-        <a href="javascript:void(0)" class="user-link" data-user-id="${u.id}">查看</a>
+  <a href="javascript:void(0)" class="user-link" data-user-id="${u.id}">View</a>
       </div>`
     ).join('');
   }
@@ -94,21 +94,21 @@ document.getElementById('do-search').addEventListener('click', runSearch);
 </script>
 <script src="/js/main.js"></script>
 <!-- 复用用户卡片浮层 -->
-<div id="user-card" class="user-card">
+  <div id="user-card" class="user-card">
   <div class="user-card-header">
     <img id="uc-avatar" class="user-card-avatar" src="/images/logo.jpg" alt="avatar" />
     <div>
-      <div id="uc-display" class="user-card-name">用户名</div>
+  <div id="uc-display" class="user-card-name">Display name</div>
       <div id="uc-username" class="user-card-username">@username</div>
     </div>
   </div>
   <div id="uc-bio" class="user-card-bio"></div>
-  <div class="user-card-stats">
-    <div><span id="uc-followers">0</span> 粉丝</div>
-    <div><span id="uc-following">0</span> 关注</div>
+    <div class="user-card-stats">
+    <div><span id="uc-followers">0</span> Followers</div>
+    <div><span id="uc-following">0</span> Following</div>
   </div>
   <div class="user-card-actions">
-    <button id="uc-follow-btn" class="btn-follow">关注</button>
+    <button id="uc-follow-btn" class="btn-follow">Follow</button>
   </div>
  </div>
 </body>

@@ -1,23 +1,32 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <title><%= typeof title !== 'undefined' ? title : '提示' %></title>
+  <title><%= typeof title !== 'undefined' ? title : 'Notice' %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>body{font-family:Arial,Helvetica,sans-serif;background:#f5f6fa;margin:0;display:flex;align-items:center;justify-content:center;height:100vh;color:#333} .card{background:#fff;padding:32px 36px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.08);max-width:460px;text-align:center}h1{font-size:20px;margin:0 0 12px}p{margin:6px 0 18px;line-height:1.5}.count{font-weight:600;color:#2c5aa0}a{color:#1e3d72;text-decoration:none;font-weight:600}a:hover{text-decoration:underline}</style>
 </head>
 <body>
-<div class="card">
-    <h1><%= typeof title !== 'undefined' ? title : '操作完成' %></h1>
-    <p><%= typeof message !== 'undefined' ? message : '操作已完成，即将跳转。' %></p>
-    <p><span class="count" id="sec"><%= typeof countdown !== 'undefined' ? countdown : 3 %></span> 秒后自动跳转。</p>
-    <p>若未跳转，点击 <a href="<%= typeof redirect !== 'undefined' ? redirect : '/' %>">这里返回</a></p>
+<div class="card" id="refresh-card" data-countdown="<%= typeof countdown !== 'undefined' ? countdown : 3 %>" data-redirect="<%= typeof redirect !== 'undefined' ? redirect : '/' %>">
+  <h1><%= typeof title !== 'undefined' ? title : 'Operation completed' %></h1>
+  <p><%= typeof message !== 'undefined' ? message : 'Operation completed. Redirecting shortly.' %></p>
+  <p><span class="count" id="sec"><%= typeof countdown !== 'undefined' ? countdown : 3 %></span> seconds until automatic redirect.</p>
+  <p>If not redirected, click <a href="<%= typeof redirect !== 'undefined' ? redirect : '/' %>">here to return</a></p>
 </div>
 <script>
-  let s = <%= typeof countdown !== 'undefined' ? countdown : 3 %>;
-  const el = document.getElementById('sec');
-  const target = '<%= typeof redirect !== "undefined" ? redirect : '/' %>';
-  const t = setInterval(()=>{ s--; if(s<=0){ clearInterval(t); location.href = target; } else { el.textContent = s; } },1000);
+  // read server-rendered values from data attributes to avoid EJS-in-JS quoting issues
+  (function(){
+    const card = document.getElementById('refresh-card');
+    const el = document.getElementById('sec');
+    let s = Number(card && card.dataset && card.dataset.countdown ? card.dataset.countdown : 3);
+    const target = card && card.dataset && card.dataset.redirect ? card.dataset.redirect : '/';
+    el.textContent = s;
+    const t = setInterval(()=>{
+      s--;
+      if(s<=0){ clearInterval(t); location.href = target; }
+      else { el.textContent = s; }
+    },1000);
+  })();
 </script>
 </body>
 </html>

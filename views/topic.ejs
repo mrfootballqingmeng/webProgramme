@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>NTU NEST - <%= topic.display_name %></title>
   <link rel="stylesheet" href="/css/style.css">
@@ -28,22 +28,22 @@
     
     <!-- 发帖表单 (多图) -->
     <div class="post-form-section">
-      <h4>在 "<%= topic.display_name %>" 发帖</h4>
+  <h4>Post in "<%= topic.display_name %>"</h4>
       <form action="/topic/<%= topic.name %>/post" method="POST" enctype="multipart/form-data" class="post-form">
-        <textarea name="content" placeholder="分享你的想法..." required class="post-textarea"></textarea>
+  <textarea name="content" placeholder="Share your thoughts..." required class="post-textarea"></textarea>
         <div class="file-upload">
-          <label for="files" class="file-label"><i class="fa fa-image"></i> 添加图片(多选)</label>
+          <label for="files" class="file-label"><i class="fa fa-image"></i> Add images (multiple)</label>
           <input type="file" id="files" name="files" accept="image/*" multiple class="file-input">
         </div>
         <div id="weibo-previews" class="image-previews" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;"></div>
-        <button type="submit" class="post-btn"><i class="fa fa-paper-plane"></i> 发布</button>
+  <button type="submit" class="post-btn"><i class="fa fa-paper-plane"></i> Publish</button>
       </form>
     </div>
   </div>
 
   <!-- 中栏 -->
   <div class="main">
-    <h3 class="section-title"><%= topic.display_name %> - 所有帖子</h3>
+  <h3 class="section-title"><%= topic.display_name %> - All posts</h3>
     <div class="posts-feed">
       <% if (posts && posts.length > 0) { %>
         <% posts.forEach(post => { %>
@@ -75,15 +75,15 @@
               </div>
               <div style="display:flex;gap:6px;margin-top:4px;">
                 <input class="comment-input" placeholder="Add a comment..." style="flex:1;padding:4px;">
-                <button class="btn-comment-submit" style="padding:4px 10px;">发送</button>
+                <button class="btn-comment-submit" style="padding:4px 10px;">Send</button>
               </div>
             </div>
           </div>
         <% }) %>
       <% } else { %>
         <div class="no-posts">
-          <p>这个话题还没有帖子</p>
-          <p>成为第一个发帖的人吧！</p>
+          <p>There are no posts in this topic yet</p>
+          <p>Be the first to post!</p>
         </div>
       <% } %>
     </div>
@@ -92,9 +92,9 @@
   <!-- 右栏 -->
   <div class="sidebar-right">
     <div class="info-card">
-      <h3>话题信息</h3>
-      <p>当前话题: <strong><%= topic.display_name %></strong></p>
-      <p>帖子数量: <%= posts ? posts.length : 0 %></p>
+  <h3>Topic Info</h3>
+  <p>Current topic: <strong><%= topic.display_name %></strong></p>
+  <p>Number of posts: <%= posts ? posts.length : 0 %></p>
     </div>
     <div class="info-card">
       <h3>Campus Events</h3>
@@ -117,17 +117,17 @@
   <div class="user-card-header">
     <img id="uc-avatar" class="user-card-avatar" src="/images/logo.jpg" alt="avatar" />
     <div>
-      <div id="uc-display" class="user-card-name">用户名</div>
+  <div id="uc-display" class="user-card-name">Username</div>
       <div id="uc-username" class="user-card-username">@username</div>
     </div>
   </div>
   <div id="uc-bio" class="user-card-bio"></div>
   <div class="user-card-stats">
-    <div><span id="uc-followers">0</span> 粉丝</div>
-    <div><span id="uc-following">0</span> 关注</div>
+  <div><span id="uc-followers">0</span> Followers</div>
+  <div><span id="uc-following">0</span> Following</div>
   </div>
   <div class="user-card-actions">
-    <button id="uc-follow-btn" class="btn-follow">关注</button>
+  <button id="uc-follow-btn" class="btn-follow">Follow</button>
   </div>
  </div>
 </body>

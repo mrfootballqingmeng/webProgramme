@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>Profile - <%= profile.username %></title>
   <link rel="stylesheet" href="/css/style.css">
@@ -29,54 +29,54 @@
 
   <!-- 中栏 -->
   <div class="main">
-    <h3 class="section-title">用户资料</h3>
+  <h3 class="section-title">User Profile</h3>
     <div class="profile-header">
       <div class="profile-avatar-wrapper">
         <img class="profile-avatar" src="<%= profile.avatar || '/images/logo.jpg' %>" onerror="this.onerror=null;this.src='/images/logo.jpg'" alt="avatar" />
       </div>
       <div class="profile-info">
-        <p><strong>用户名:</strong> <%= profile.username %></p>
-        <p><strong>显示名称:</strong> <%= profile.display_name || '-' %></p>
-        <p><strong>简介:</strong> <%= profile.bio || '-' %></p>
-        <p><strong>加入时间:</strong> <%= profile.created_at ? new Date(profile.created_at).toLocaleDateString() : '-' %></p>
+  <p><strong>Username:</strong> <%= profile.username %></p>
+  <p><strong>Display name:</strong> <%= profile.display_name || '-' %></p>
+  <p><strong>Bio:</strong> <%= profile.bio || '-' %></p>
+  <p><strong>Joined:</strong> <%= profile.created_at ? new Date(profile.created_at).toLocaleDateString() : '-' %></p>
       </div>
     </div>
 
     <!-- 用户发帖历史 -->
     <div class="profile-posts-section">
-      <h3 class="profile-edit-title">我的发帖历史</h3>
+      <h3 class="profile-edit-title">My posts</h3>
       <div id="user-posts-container" class="user-posts-feed">
-        <div class="loading-message">加载中...</div>
+        <div class="loading-message">Loading...</div>
       </div>
     </div>
 
     <% if (user && user.id === profile.id) { %>
     <div class="profile-edit-section">
-      <h3 class="profile-edit-title">编辑资料</h3>
+  <h3 class="profile-edit-title">Edit profile</h3>
       <form action="/profile" method="POST" enctype="multipart/form-data" class="profile-form">
-        <input type="text" name="username" placeholder="新的用户名 (留空不改)">
-        <input type="text" name="display_name" placeholder="显示名称 (留空不改)">
-        <textarea name="bio" placeholder="个人简介 (留空不改)" rows="3"></textarea>
-        <label class="file-input-wrapper">头像:
+        <input type="text" name="username" placeholder="New username (leave blank to keep)">
+        <input type="text" name="display_name" placeholder="Display name (leave blank to keep)">
+        <textarea name="bio" placeholder="Bio (leave blank to keep)" rows="3"></textarea>
+        <label class="file-input-wrapper">Avatar:
           <input type="file" name="avatar" accept="image/*">
         </label>
-        <button type="submit" class="btn-primary">保存修改</button>
+        <button type="submit" class="btn-primary">Save changes</button>
       </form>
     </div>
     <div class="profile-edit-section">
-      <h3 class="profile-edit-title">修改密码</h3>
+      <h3 class="profile-edit-title">Change password</h3>
       <form action="/profile/change-password" method="POST" class="profile-form">
-        <input type="password" name="old_password" placeholder="原密码 (首次设置可留空)" autocomplete="current-password">
-        <input type="password" name="new_password" placeholder="新密码 (至少6位)" required autocomplete="new-password">
-        <input type="password" name="confirm_password" placeholder="确认新密码" required autocomplete="new-password">
-        <button type="submit" class="btn-primary">更新密码</button>
+        <input type="password" name="old_password" placeholder="Old password (leave empty if not set)" autocomplete="current-password">
+        <input type="password" name="new_password" placeholder="New password (min 6 chars)" required autocomplete="new-password">
+        <input type="password" name="confirm_password" placeholder="Confirm new password" required autocomplete="new-password">
+        <button type="submit" class="btn-primary">Update password</button>
       </form>
     </div>
     <div class="profile-edit-section">
-      <h3 class="profile-edit-title">账户操作</h3>
+      <h3 class="profile-edit-title">Account actions</h3>
       <div class="profile-form">
-        <a href="/logout" class="btn-logout" onclick="return confirm('确定要退出登录吗？')">
-          <i class="fas fa-sign-out-alt"></i> 退出登录
+        <a href="/logout" class="btn-logout" onclick="return confirm('Are you sure you want to log out?')">
+          <i class="fas fa-sign-out-alt"></i> Log out
         </a>
       </div>
     </div>
@@ -86,11 +86,11 @@
   <!-- 右栏 -->
   <div class="sidebar-right">
     <div class="info-card">
-      <h3>个人资料提示</h3>
+      <h3>Profile tips</h3>
       <ul>
-        <li>完善个人信息提升可信度</li>
-        <li>上传头像让其他用户认识你</li>
-        <li>定期更新个人简介</li>
+        <li>Complete your profile to increase credibility</li>
+        <li>Upload an avatar so others can recognize you</li>
+        <li>Update your bio regularly</li>
       </ul>
     </div>
     <div class="info-card">
@@ -127,12 +127,12 @@
         });
         // Bind delete functionality
         bindUserPostsInteractions();
-      } else {
-        container.innerHTML = '<div class="no-posts"><p>还没有发布过帖子</p></div>';
+        } else {
+        container.innerHTML = '<div class="no-posts"><p>No posts yet</p></div>';
       }
     } catch (error) {
       console.error('Error loading user posts:', error);
-      container.innerHTML = '<div class="error-message">加载失败，请刷新页面重试</div>';
+  container.innerHTML = '<div class="error-message">Failed to load. Please refresh and try again.</div>';
     }
   }
   
@@ -150,9 +150,9 @@
       filesHtml += '</div>';
     }
     
-    postDiv.innerHTML = `
+        postDiv.innerHTML = `
       <div class="post-header">
-        <span class="post-topic">发布于 ${post.topic_name || '未知话题'}</span>
+        <span class="post-topic">Posted in ${post.topic_name || 'Unknown topic'}</span>
         <span class="post-time">${new Date(post.createdAt).toLocaleDateString()}</span>
       </div>
       <div class="post-content">
@@ -163,7 +163,7 @@
         <span>❤️ ${post.likes || 0}</span>
         <span>💬 ${post.comments || 0}</span>
         <span>↗️ ${post.shares || 0}</span>
-        <button class="btn-delete-user-post" data-post-id="${post.id}">🗑️ 删除</button>
+        <button class="btn-delete-user-post" data-post-id="${post.id}">🗑️ Delete</button>
       </div>
     `;
     
@@ -176,7 +176,7 @@
       btn._bound = true;
       btn.addEventListener('click', async () => {
         const postId = btn.getAttribute('data-post-id');
-        if (!confirm('确定要删除这个帖子吗？删除后无法恢复。')) return;
+  if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) return;
         
         try {
           const response = await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
@@ -189,13 +189,13 @@
               postCard.style.opacity = '0';
               setTimeout(() => postCard.remove(), 300);
             }
-            alert('帖子已删除');
+            alert('Post deleted');
           } else {
-            alert(data.error || '删除失败');
+            alert(data.error || 'Failed to delete');
           }
         } catch (error) {
           console.error('Delete error:', error);
-          alert('删除失败');
+          alert('Failed to delete');
         }
       });
     });

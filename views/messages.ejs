@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>Messages - NTU NEST</title>
   <link rel="stylesheet" href="/css/style.css">
@@ -29,18 +29,18 @@
 
   <!-- 中栏 -->
   <div class="main">
-    <h3 class="section-title">私信</h3>
+  <h3 class="section-title">Direct Messages</h3>
 
     <!-- 上部：对话列表 -->
     <div class="conversations-section">
       <div class="conversations-header">
-        <h4>对话列表</h4>
+        <h4>Conversations</h4>
         <button id="new-message-btn" class="btn-new-message">
-          <i class="fas fa-plus"></i> 新建私信
+          <i class="fas fa-plus"></i> New message
         </button>
       </div>
       <div id="conversations-list" class="conversations-list">
-        <div class="loading-message">加载中...</div>
+        <div class="loading-message">Loading...</div>
       </div>
     </div>
 
@@ -48,8 +48,8 @@
     <div id="welcome-screen" class="welcome-screen">
       <div class="welcome-content">
         <i class="fas fa-envelope-open-text welcome-icon"></i>
-        <h4>欢迎来到你的收件箱</h4>
-        <p>选择一个对话开始聊天，或者点击"新建私信"发送第一封私信。</p>
+        <h4>Welcome to your inbox</h4>
+        <p>Select a conversation to start chatting, or click "New message" to send your first DM.</p>
       </div>
     </div>
     
@@ -68,7 +68,7 @@
       
       <div class="message-input-area">
         <div class="message-input-container">
-          <textarea id="message-input" placeholder="输入消息..." rows="2"></textarea>
+          <textarea id="message-input" placeholder="Type a message..." rows="2"></textarea>
           <button id="send-message-btn" class="btn-send-message">
             <i class="fas fa-paper-plane"></i>
           </button>
@@ -80,11 +80,11 @@
   <!-- 右栏 -->
   <div class="sidebar-right">
     <div class="info-card">
-      <h3>私信帮助</h3>
+      <h3>DM Help</h3>
       <ul>
-        <li>点击上方对话列表开始对话</li>
-        <li>使用"新建私信"联系新用户</li>
-        <li>支持实时消息发送</li>
+        <li>Click a conversation above to start</li>
+        <li>Use "New message" to contact a new user</li>
+        <li>Supports real-time messaging</li>
       </ul>
     </div>
     <div class="info-card">
@@ -104,22 +104,22 @@
 <div id="new-message-modal" class="modal" style="display: none;">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>新建私信</h3>
+      <h3>New message</h3>
       <button class="modal-close">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>收件人用户名:</label>
-        <input type="text" id="recipient-username" placeholder="输入用户名">
+  <label>Recipient username:</label>
+  <input type="text" id="recipient-username" placeholder="Enter username">
       </div>
       <div class="form-group">
-        <label>消息内容:</label>
-        <textarea id="new-message-content" placeholder="输入你的消息..." rows="4"></textarea>
+  <label>Message content:</label>
+  <textarea id="new-message-content" placeholder="Enter your message..." rows="4"></textarea>
       </div>
     </div>
     <div class="modal-footer">
-      <button id="send-new-message-btn" class="btn-primary">发送</button>
-      <button class="modal-cancel">取消</button>
+      <button id="send-new-message-btn" class="btn-primary">Send</button>
+      <button class="modal-cancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -186,7 +186,7 @@
       const container = document.getElementById('conversations-list');
       
       if (conversations.length === 0) {
-        container.innerHTML = '<div class="no-conversations"><p>还没有对话</p><p>点击"新建私信"开始第一次对话</p></div>';
+        container.innerHTML = '<div class="no-conversations"><p>No conversations yet</p><p>Click "New message" to start your first conversation</p></div>';
         return;
       }
 
@@ -200,7 +200,7 @@
           <img class="conv-avatar" src="${conv.avatar || '/images/logo.jpg'}" alt="avatar" onerror="this.src='/images/logo.jpg'">
           <div class="conv-info">
             <div class="conv-username">${conv.username}</div>
-            <div class="conv-last-message">${conv.last_message || '暂无消息'}</div>
+            <div class="conv-last-message">${conv.last_message || 'No messages'}</div>
           </div>
           <div class="conv-meta">
             <div class="conv-time">${formatTime(conv.last_message_time)}</div>
@@ -258,7 +258,7 @@
       console.log('Rendering messages:', messages);
 
       if (!messages || messages.length === 0) {
-        container.innerHTML = '<div class="no-messages">暂无消息</div>';
+        container.innerHTML = '<div class="no-messages">No messages</div>';
         return;
       }
 
@@ -304,11 +304,11 @@
           await loadMessages(currentConversationUser.user_id);
           await loadConversations(); // 更新对话列表
         } else {
-          alert(data.error || '发送失败');
+          alert(data.error || 'Failed to send');
         }
       } catch (error) {
         console.error('Error sending message:', error);
-        alert('发送失败');
+  alert('Failed to send');
       }
     }
 
@@ -317,7 +317,7 @@
       const content = document.getElementById('new-message-content').value.trim();
       
       if (!username || !content) {
-        alert('请填写收件人和消息内容');
+        alert('Please enter recipient and message content');
         return;
       }
 
@@ -344,11 +344,11 @@
             await openConversation(newConv);
           }
         } else {
-          alert(data.error || '发送失败');
+          alert(data.error || 'Failed to send');
         }
       } catch (error) {
         console.error('Error sending new message:', error);
-        alert('发送失败');
+  alert('Failed to send');
       }
     }
 
@@ -363,10 +363,10 @@
       const now = new Date();
       const diff = now - date;
       
-      if (diff < 60000) return '刚刚';
-      if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
-      if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
-      if (diff < 604800000) return Math.floor(diff / 86400000) + '天前';
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' minutes ago';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' hours ago';
+  if (diff < 604800000) return Math.floor(diff / 86400000) + ' days ago';
       
       return date.toLocaleDateString();
     }

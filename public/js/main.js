@@ -97,8 +97,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
           <button class="btn-del-event" data-id="${ev.id}" style="background:#fff;border:1px solid #e5e7eb;color:#dc3545;border-radius:8px;padding:4px 8px;">删除</button>
         </div>`;
       }).join('');
-      calList.innerHTML = items || '<div style="color:#999;">未来30天暂无事件</div>';
-    }catch(e){ calList.innerHTML = '<div style="color:#999;">加载失败</div>'; }
+      calList.innerHTML = items || '<div style="color:#999;">No events in the next 30 days</div>';
+    }catch(e){ calList.innerHTML = '<div style="color:#999;">Failed to load</div>'; }
   }
   if (calList) loadEvents();
   if (calList){
@@ -118,16 +118,21 @@ document.addEventListener('DOMContentLoaded', ()=>{
       const location = document.getElementById('cal-location').value.trim();
       const notes = document.getElementById('cal-notes').value.trim();
       const remind = document.getElementById('cal-remind').value;
-      if (!title || !start){ alert('请填写标题与开始时间'); return; }
+      if (!title || !start){ alert('Please fill in title and start time'); return; }
+      
+      // Convert custom format to ISO format for API
+      const startISO = start ? start.replace(' ', 'T') + ':00' : null;
+      const endISO = end ? end.replace(' ', 'T') + ':00' : null;
+      
       try{
-        const r = await fetch('/api/events', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title, start_time:start, end_time:end||null, location, notes, remind_minutes: remind }) });
+        const r = await fetch('/api/events', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title, start_time:startISO, end_time:endISO||null, location, notes, remind_minutes: remind }) });
         const j = await r.json();
         if (r.ok){
           // 清空表单并刷新
           ['cal-title','cal-start','cal-end','cal-location','cal-notes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
           loadEvents();
-        } else { alert(j.error||'添加失败'); }
-      }catch(e){ alert('添加失败'); }
+        } else { alert(j.error||'Failed to add'); }
+      }catch(e){ alert('Failed to add'); }
     });
   }
 
@@ -240,11 +245,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
               postCard.style.opacity = '0';
               setTimeout(() => postCard.remove(), 300);
             }
-            alert('帖子已删除');
+            alert('Post deleted');
           } else {
-            alert(j.error || '删除失败');
+            alert(j.error || 'Delete failed');
           }
-        } catch(e){ console.error(e); alert('删除失败'); }
+        } catch(e){ console.error(e); alert('Delete failed'); }
       });
     });
   }
@@ -369,7 +374,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         }
         updateFollowBtn();
       }catch(e){
-        alert('操作失败，请先登录或稍后再试');
+        alert('Operation failed, please login first or try again later');
         console.warn(e);
       }
     });
@@ -464,16 +469,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
     try {
       const res = await fetch('/api/drafts', { method:'POST', body: form });
       const j = await res.json();
-      if (res.ok){ draftIdInput.value = j.id; loadDrafts(); alert('草稿已保存'); }
-      else alert(j.error || '保存失败');
-    } catch(e){ alert('保存失败: '+e.message); }
+      if (res.ok){ draftIdInput.value = j.id; loadDrafts(); alert('Draft saved'); }
+      else alert(j.error || 'Save failed');
+    } catch(e){ alert('Save failed: '+e.message); }
   }
   async function deleteDraft(id){
-    if (!confirm('确定删除该草稿?')) return;
-    try { const res = await fetch('/api/drafts/'+id, { method:'DELETE' }); if (res.ok){ loadDrafts(); if (draftIdInput.value == id) draftIdInput.value=''; } } catch(e){ alert('删除失败'); }
+    if (!confirm('Are you sure you want to delete this draft?')) return;
+    try { const res = await fetch('/api/drafts/'+id, { method:'DELETE' }); if (res.ok){ loadDrafts(); if (draftIdInput.value == id) draftIdInput.value=''; } } catch(e){ alert('Delete failed'); }
   }
   async function publishDraft(id){
-    try { const res = await fetch('/api/drafts/'+id+'/publish', { method:'POST' }); const j = await res.json(); if (res.ok){ alert('发布成功'); draftIdInput.value=''; loadDrafts(); location.reload(); } else alert(j.error||'发布失败'); } catch(e){ alert('发布失败'); }
+    try { const res = await fetch('/api/drafts/'+id+'/publish', { method:'POST' }); const j = await res.json(); if (res.ok){ alert('Published successfully'); draftIdInput.value=''; loadDrafts(); location.reload(); } else alert(j.error||'Publish failed'); } catch(e){ alert('Publish failed'); }
   }
   function editDraft(id){
     // 简化：重新获取全部草稿并找到该条
@@ -482,7 +487,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       draftIdInput.value = d.id;
       if (contentBox) contentBox.value = d.content||'';
       if (previews){ previews.innerHTML=''; (d.files||[]).forEach(f=>{ const img=document.createElement('img'); img.src=f; img.style.width='70px'; img.style.height='70px'; img.style.objectFit='cover'; img.style.borderRadius='6px'; previews.appendChild(img); }); }
-      alert('已载入草稿，可继续编辑后再次保存或发布');
+      alert('Draft loaded, you can continue editing and save or publish again');
     });
   }
   if (saveDraftBtn) saveDraftBtn.addEventListener('click', saveDraft);
@@ -525,12 +530,35 @@ document.addEventListener('DOMContentLoaded', ()=>{
   try{
     const box = document.createElement('div');
     box.className = 'legal-links';
-    box.innerHTML = '<div class="legal-title">Contact us</div>'+
-      '<div class="legal-contact">TEL: +65 1 2345678 &nbsp;&nbsp; E-mail: NTU NEST@ntu.com</div>'+
+    box.innerHTML = '<div class="legal-title" id="developer-toggle" style="cursor:pointer;user-select:none;" title="Click to expand">Developer <span id="developer-arrow">▼</span></div>'+
+      '<div class="legal-contact" id="developer-details" style="display:none;margin-top:8px;font-size:12px;color:#666;line-height:1.6;">'+
+      '<div style="margin-bottom:3px;">GAO HAO (G2503948L)</div>'+
+      '<div style="margin-bottom:3px;">MA YUANYE (G2503333E)</div>'+
+      '<div style="margin-bottom:3px;">DING JUNWEI (G2502024F)</div>'+
+      '<div style="margin-bottom:3px;">HONG RUIHAN (G2503960J)</div>'+
+      '<div style="margin-bottom:3px;">Qu ZhanRui (G2506628G)</div>'+
+      '<div style="margin-bottom:3px;">DING ZIJIAN (G2502028E)</div>'+
+      '<div>LIU JUNZHE (G2501961L)</div>'+
+      '</div>'+
       '<div class="legal-sep"></div>'+
       '<a href="/terms" target="_self">Terms of Service</a> · <a href="/privacy" target="_self">Privacy Policy</a> · <a href="/cookies" target="_self">Cookie Policy</a>';
     document.addEventListener('DOMContentLoaded', ()=>{
       document.body.appendChild(box);
+      
+      // 添加点击展开/收起功能
+      const toggle = document.getElementById('developer-toggle');
+      const details = document.getElementById('developer-details');
+      const arrow = document.getElementById('developer-arrow');
+      
+      toggle.addEventListener('click', function() {
+        if (details.style.display === 'none') {
+          details.style.display = 'block';
+          arrow.textContent = '▲';
+        } else {
+          details.style.display = 'none';
+          arrow.textContent = '▼';
+        }
+      });
     });
   }catch(e){}
 })();

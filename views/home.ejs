@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>NTU NEST - Home</title>
   <link rel="stylesheet" href="/css/style.css">
@@ -26,27 +26,27 @@
       <li><a href="/history"><i class="fa fa-clock-rotate-left"></i> History</a></li>
     </ul>
     <!-- 草稿箱入口按钮（点击后在右侧显示草稿） -->
-    <button id="open-drafts" class="post-btn" style="width:100%; margin-top:10px; background:linear-gradient(135deg,#6b7280,#4b5563);">
-      <i class="fa fa-file-lines"></i> 草稿箱
+      <button id="open-drafts" class="post-btn" style="width:100%; margin-top:10px; background:linear-gradient(135deg,#6b7280,#4b5563);">
+        <i class="fa fa-file-lines"></i> Drafts
     </button>
      <!-- 发帖表单 (多图) -->
      <div class="post-form-section">
-      <h4>发布新帖</h4>
-      <form action="/home/post" method="POST" enctype="multipart/form-data" class="post-form">
+      <h4>Create New Post</h4>
+        <form action="/home/post" method="POST" enctype="multipart/form-data" class="post-form">
         <select name="topic_id" required class="topic-select">
-          <option value="">选择话题</option>
+            <option value="">Select a topic</option>
           <% topics.forEach(topic => { %>
             <option value="<%= topic.id %>"><%= topic.display_name %></option>
           <% }) %>
         </select>
-  <textarea name="content" placeholder="分享你的想法..." class="post-textarea"></textarea>
+  <textarea name="content" placeholder="Share your thoughts..." class="post-textarea"></textarea>
         <div class="file-upload">
-          <label for="files" class="file-label"><i class="fa fa-image"></i> 添加图片(可多选)</label>
+            <label for="files" class="file-label"><i class="fa fa-image"></i> Add images (multiple)</label>
           <input type="file" id="files" name="files" accept="image/*" multiple class="file-input">
         </div>
         <div id="weibo-previews" class="image-previews" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;"></div>
-        <button type="submit" class="post-btn"><i class="fa fa-paper-plane"></i> 发布</button>
-        <button type="button" id="draft-save-btn" style="margin-left:8px;" class="post-btn">保存草稿</button>
+          <button type="submit" class="post-btn"><i class="fa fa-paper-plane"></i> Publish</button>
+          <button type="button" id="draft-save-btn" style="margin-left:8px;" class="post-btn">Save Draft</button>
         <input type="hidden" id="current-draft-id" value="">
       </form>
     </div>
@@ -57,8 +57,8 @@
     <!-- 中栏草稿箱（默认隐藏，仅草稿视图使用） -->
     <div id="drafts-main-card" style="display:none; margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <h4 style="margin:0;">草稿箱</h4>
-        <button id="back-to-posts" class="post-btn" style="background:linear-gradient(135deg,#6b7280,#4b5563);">返回帖子</button>
+          <h4 style="margin:0;">Drafts</h4>
+          <button id="back-to-posts" class="post-btn" style="background:linear-gradient(135deg,#6b7280,#4b5563);">Back to posts</button>
       </div>
       <div id="drafts-cards" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
@@ -99,7 +99,7 @@
               <button class="btn-comment-toggle" data-post-id="<%= post.id %>">💬 <span class="comment-count"><%= post.comments || 0 %></span></button>
               <button class="btn-share" data-post-id="<%= post.id %>">↗️ <span class="share-count"><%= post.shares || 0 %></span></button>
               <% if (user && user.id === post.user_id) { %>
-                <button class="btn-delete" data-post-id="<%= post.id %>" style="margin-left:auto;">🗑️ 删除</button>
+                  <button class="btn-delete" data-post-id="<%= post.id %>" style="margin-left:auto;">🗑️ Delete</button>
               <% } %>
             </div>
             <div class="comments-section" data-post-id="<%= post.id %>" style="display:none;margin-top:6px;">
@@ -110,15 +110,15 @@
               </div>
               <div style="display:flex;gap:6px;margin-top:4px;">
                 <input class="comment-input" placeholder="Add a comment..." style="flex:1;padding:4px;">
-                <button class="btn-comment-submit" style="padding:4px 10px;">发送</button>
+                  <button class="btn-comment-submit" style="padding:4px 10px;">Send</button>
               </div>
             </div>
           </div>
         <% }) %>
       <% } else { %>
         <div class="no-posts">
-          <p>还没有帖子，快去发布第一个帖子吧！</p>
-          <p>点击左侧的 "Topics" 选择一个话题开始发帖。</p>
+            <p>No posts yet — be the first to publish!</p>
+            <p>Click "Topics" on the left to choose a topic and start posting.</p>
         </div>
       <% } %>
     </div>
@@ -129,26 +129,30 @@
     <div class="info-card" id="card-calendar">
       <h3 class="card-header-row" style="display:flex;align-items:center;justify-content:space-between;margin:0;">
         <span>Calendar</span>
-        <button id="toggle-calendar" class="collapse-btn" aria-expanded="true" title="折叠/展开" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;cursor:pointer;">
+        <button id="toggle-calendar" class="collapse-btn" aria-expanded="true" title="Collapse/Expand" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;cursor:pointer;">
           <i class="fa fa-chevron-up"></i>
         </button>
       </h3>
       <div id="calendar-body" class="calendar-form" style="display:flex;flex-direction:column;gap:8px;">
-        <input id="cal-title" placeholder="事件/课程标题" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
-        <input id="cal-start" type="datetime-local" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
-        <input id="cal-end" type="datetime-local" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
-        <input id="cal-location" placeholder="地点(可选)" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
-        <textarea id="cal-notes" placeholder="备注(可选)" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;min-height:60px;"></textarea>
-        <label style="font-size:12px;color:#666;">提醒（分钟前）：
+  <input id="cal-title" placeholder="Event / Class title" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
+  <label style="font-size:12px;color:#666;">Start date & time:
+        <input id="cal-start" type="text" placeholder="YYYY-MM-DD HH:MM" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;display:block;margin-top:4px;" readonly onclick="openDateTimePicker(this)">
+  </label>
+  <label style="font-size:12px;color:#666;">End date & time (optional):
+        <input id="cal-end" type="text" placeholder="YYYY-MM-DD HH:MM" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;display:block;margin-top:4px;" readonly onclick="openDateTimePicker(this)">
+  </label>
+  <input id="cal-location" placeholder="Location (optional)" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
+  <textarea id="cal-notes" placeholder="Notes (optional)" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;min-height:60px;"></textarea>
+  <label style="font-size:12px;color:#666;">Reminder (minutes before):
           <input id="cal-remind" type="number" min="0" step="5" value="60" style="width:80px;margin-left:6px;">
         </label>
-        <button id="cal-add" class="post-btn">添加事件</button>
+  <button id="cal-add" class="post-btn">Add event</button>
       </div>
     </div>
     <div class="info-card" id="card-upcoming">
       <h3 class="card-header-row" style="display:flex;align-items:center;justify-content:space-between;margin:0;">
         <span>Upcoming</span>
-        <button id="toggle-upcoming" class="collapse-btn" aria-expanded="true" title="折叠/展开" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;cursor:pointer;">
+        <button id="toggle-upcoming" class="collapse-btn" aria-expanded="true" title="Collapse/Expand" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;cursor:pointer;">
           <i class="fa fa-chevron-up"></i>
         </button>
       </h3>
@@ -235,18 +239,180 @@ document.getElementById('search-type').addEventListener('change', performSearch)
   <div class="user-card-header">
     <img id="uc-avatar" class="user-card-avatar" src="/images/logo.jpg" alt="avatar" />
     <div>
-      <div id="uc-display" class="user-card-name">用户名</div>
+  <div id="uc-display" class="user-card-name">Display name</div>
       <div id="uc-username" class="user-card-username">@username</div>
     </div>
   </div>
   <div id="uc-bio" class="user-card-bio"></div>
   <div class="user-card-stats">
-    <div><span id="uc-followers">0</span> 粉丝</div>
-    <div><span id="uc-following">0</span> 关注</div>
+    <div><span id="uc-followers">0</span> Followers</div>
+    <div><span id="uc-following">0</span> Following</div>
   </div>
   <div class="user-card-actions">
-    <button id="uc-follow-btn" class="btn-follow">关注</button>
+    <button id="uc-follow-btn" class="btn-follow">Follow</button>
   </div>
  </div>
+
+<!-- Custom Date Time Picker Modal -->
+<div id="datetime-picker-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:center;">
+  <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:300px;">
+    <h4 style="margin:0 0 15px 0;">Select Date & Time</h4>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <label>Year:
+        <select id="dt-year" style="padding:5px;border:1px solid #ddd;border-radius:4px;width:100%;"></select>
+      </label>
+      <label>Month:
+        <select id="dt-month" style="padding:5px;border:1px solid #ddd;border-radius:4px;width:100%;"></select>
+      </label>
+      <label>Day:
+        <select id="dt-day" style="padding:5px;border:1px solid #ddd;border-radius:4px;width:100%;"></select>
+      </label>
+      <label>Hour:
+        <select id="dt-hour" style="padding:5px;border:1px solid #ddd;border-radius:4px;width:100%;"></select>
+      </label>
+      <label>Minute:
+        <select id="dt-minute" style="padding:5px;border:1px solid #ddd;border-radius:4px;width:100%;"></select>
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:15px;">
+      <button onclick="confirmDateTime()" style="flex:1;padding:8px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;">Confirm</button>
+      <button onclick="closeDateTimePicker()" style="flex:1;padding:8px;background:#6c757d;color:white;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentDateTimeInput = null;
+
+function openDateTimePicker(input) {
+  currentDateTimeInput = input;
+  const modal = document.getElementById('datetime-picker-modal');
+  
+  // Initialize date picker values
+  const now = new Date();
+  const currentValue = input.value;
+  let selectedDate = now;
+  
+  if (currentValue) {
+    const parsedDate = new Date(currentValue.replace(' ', 'T'));
+    if (!isNaN(parsedDate.getTime())) {
+      selectedDate = parsedDate;
+    }
+  }
+  
+  populateYearOptions(selectedDate.getFullYear());
+  populateMonthOptions(selectedDate.getMonth());
+  populateDayOptions(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+  populateHourOptions(selectedDate.getHours());
+  populateMinuteOptions(selectedDate.getMinutes());
+  
+  modal.style.display = 'flex';
+}
+
+function closeDateTimePicker() {
+  document.getElementById('datetime-picker-modal').style.display = 'none';
+  currentDateTimeInput = null;
+}
+
+function confirmDateTime() {
+  const year = document.getElementById('dt-year').value;
+  const month = document.getElementById('dt-month').value;
+  const day = document.getElementById('dt-day').value;
+  const hour = document.getElementById('dt-hour').value;
+  const minute = document.getElementById('dt-minute').value;
+  
+  const formattedDateTime = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} ${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  
+  if (currentDateTimeInput) {
+    currentDateTimeInput.value = formattedDateTime;
+  }
+  
+  closeDateTimePicker();
+}
+
+function populateYearOptions(selectedYear) {
+  const yearSelect = document.getElementById('dt-year');
+  yearSelect.innerHTML = '';
+  const currentYear = new Date().getFullYear();
+  for (let year = currentYear; year <= currentYear + 5; year++) {
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = year;
+    if (year === selectedYear) option.selected = true;
+    yearSelect.appendChild(option);
+  }
+}
+
+function populateMonthOptions(selectedMonth) {
+  const monthSelect = document.getElementById('dt-month');
+  monthSelect.innerHTML = '';
+  const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+  months.forEach((month, index) => {
+    const option = document.createElement('option');
+    option.value = month;
+    option.textContent = month;
+    if (index === selectedMonth) option.selected = true;
+    monthSelect.appendChild(option);
+  });
+}
+
+function populateDayOptions(year, month, selectedDay) {
+  const daySelect = document.getElementById('dt-day');
+  daySelect.innerHTML = '';
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const option = document.createElement('option');
+    const dayStr = day.toString().padStart(2, '0');
+    option.value = dayStr;
+    option.textContent = dayStr;
+    if (day === selectedDay) option.selected = true;
+    daySelect.appendChild(option);
+  }
+}
+
+function populateHourOptions(selectedHour) {
+  const hourSelect = document.getElementById('dt-hour');
+  hourSelect.innerHTML = '';
+  for (let hour = 0; hour < 24; hour++) {
+    const option = document.createElement('option');
+    const hourStr = hour.toString().padStart(2, '0');
+    option.value = hourStr;
+    option.textContent = hourStr;
+    if (hour === selectedHour) option.selected = true;
+    hourSelect.appendChild(option);
+  }
+}
+
+function populateMinuteOptions(selectedMinute) {
+  const minuteSelect = document.getElementById('dt-minute');
+  minuteSelect.innerHTML = '';
+  for (let minute = 0; minute < 60; minute += 5) {
+    const option = document.createElement('option');
+    const minuteStr = minute.toString().padStart(2, '0');
+    option.value = minuteStr;
+    option.textContent = minuteStr;
+    if (minute === selectedMinute || (selectedMinute >= minute && selectedMinute < minute + 5)) {
+      option.selected = true;
+    }
+    minuteSelect.appendChild(option);
+  }
+}
+
+// Update day options when year or month changes
+document.addEventListener('DOMContentLoaded', function() {
+  if (document.getElementById('dt-year')) {
+    document.getElementById('dt-year').addEventListener('change', updateDayOptions);
+    document.getElementById('dt-month').addEventListener('change', updateDayOptions);
+  }
+});
+
+function updateDayOptions() {
+  const year = parseInt(document.getElementById('dt-year').value);
+  const month = parseInt(document.getElementById('dt-month').value) - 1;
+  const currentDay = parseInt(document.getElementById('dt-day').value) || 1;
+  populateDayOptions(year, month, currentDay);
+}
+</script>
+
 </body>
 </html>

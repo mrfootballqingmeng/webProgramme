@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>NTU NEST - Topics</title>
   <link rel="stylesheet" href="/css/style.css">
@@ -36,12 +36,12 @@
           <div class="topic-card">
             <span class="topic-tag">Topic</span>
             <h4><a href="/topic/<%= topic.name %>"><%= topic.display_name %></a></h4>
-            <p>点击进入话题查看所有帖子</p>
+            <p>Click a topic to view all posts</p>
           </div>
         <% }) %>
       <% } else { %>
         <div class="no-topics">
-          <p>暂无话题</p>
+          <p>No topics yet</p>
         </div>
       <% } %>
     </div>

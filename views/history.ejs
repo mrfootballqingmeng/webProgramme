@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>NTU NEST - History</title>
   <link rel="stylesheet" href="/css/style.css">
@@ -34,27 +34,27 @@
           <div class="timeline-item">
             <% if (item.type === 'post') { %>
               <i class="fa fa-pen"></i>
-              <span>你发布了一条新帖</span>
+              <span>You published a new post</span>
               <div class="timeline-extra"><%= item.extra || '' %></div>
             <% } else if (item.type === 'like') { %>
               <i class="fa fa-heart"></i>
-              <span>你点赞了一条帖子 (ID: <%= item.ref_id %>)</span>
+              <span>You liked a post (ID: <%= item.ref_id %>)</span>
             <% } else if (item.type === 'comment') { %>
               <i class="fa fa-comment"></i>
-              <span>你评论了帖子 (ID: <%= item.ref_id %>)</span>
+              <span>You commented on a post (ID: <%= item.ref_id %>)</span>
               <div class="timeline-extra"><%= item.extra || '' %></div>
             <% } else if (item.type === 'share') { %>
               <i class="fa fa-share"></i>
-              <span>你分享了一条帖子 (ID: <%= item.ref_id %>)</span>
+              <span>You shared a post (ID: <%= item.ref_id %>)</span>
             <% } else if (item.type === 'follow') { %>
               <i class="fa fa-user-plus"></i>
-              <span>你关注了 @<%= item.extra %> <%= item.extra2 ? '('+item.extra2+')' : '' %></span>
+              <span>You followed @<%= item.extra %> <%= item.extra2 ? '('+item.extra2+')' : '' %></span>
             <% } %>
             <span class="timeline-time"><%= item.created_at.toLocaleString() %></span>
           </div>
         <% }) %>
       <% } else { %>
-        <div class="no-posts"><p>暂无历史记录</p></div>
+  <div class="no-posts"><p>No history yet</p></div>
       <% } %>
     </div>
   </div>
@@ -62,8 +62,8 @@
   <!-- 右栏 -->
   <div class="sidebar-right">
     <div class="info-card">
-      <h3>Tips</h3>
-      <p>你可以在这里查看最近的操作记录。</p>
+  <h3>Tips</h3>
+  <p>View your recent activity here.</p>
     </div>
   </div>
 </div>
