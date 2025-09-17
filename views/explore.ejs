@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NTU NEST - Explore</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="container">
+  <!-- 左栏 -->
+  <div class="sidebar-left">
+    <div class="logo-section">
+      <img src="/images/logo.jpg" class="nav-logo">
+      <h2>NTU NEST</h2>
+    </div>
+    <ul class="nav">
+      <li><a href="/home"><i class="fa fa-home"></i> Home</a></li>
+      <li><a href="/topics"><i class="fa fa-hashtag"></i> Topics</a></li>
+      <li><a href="/my-follows"><i class="fa fa-user-check"></i> My Follow</a></li>
+      <li class="active"><i class="fa fa-magnifying-glass"></i> Explore</li>
+      <li><a href="/notifications"><i class="fa fa-bell"></i> Notifications</a></li>
+      <li><a href="/messages"><i class="fa fa-envelope"></i> Messages</a></li>
+      <li><a href="/profile"><i class="fa fa-user"></i> Profile</a></li>
+      <li><a href="/history"><i class="fa fa-clock-rotate-left"></i> History</a></li>
+    </ul>
+  </div>
+
+  <!-- 中栏 -->
+  <div class="main">
+    <h3 class="section-title">Explore</h3>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+      <input id="q" placeholder="搜索用户或帖子..." style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
+      <select id="type" style="padding:8px; border:1px solid #ddd; border-radius:6px;">
+        <option value="all">All</option>
+        <option value="users">Users</option>
+        <option value="posts">Posts</option>
+      </select>
+      <button id="do-search" class="post-btn">Search</button>
+    </div>
+
+    <div id="results">
+      <div id="user-results" style="margin-bottom:16px;"></div>
+      <div id="post-results"></div>
+    </div>
+  </div>
+
+  <!-- 右栏 -->
+  <div class="sidebar-right">
+    <div class="info-card">
+      <h3>Tips</h3>
+      <p>按 All 同时搜索用户和帖子；点击用户名可打开用户卡片。</p>
+    </div>
+  </div>
+</div>
+<script>
+async function runSearch(){
+  const q = document.getElementById('q').value.trim();
+  const type = document.getElementById('type').value;
+  if (!q){ document.getElementById('user-results').innerHTML=''; document.getElementById('post-results').innerHTML=''; return; }
+  const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}`);
+  const j = await res.json();
+  const ur = document.getElementById('user-results');
+  const pr = document.getElementById('post-results');
+  ur.innerHTML=''; pr.innerHTML='';
+  if (j.users && j.users.length){
+    ur.innerHTML = `<h4>Users</h4>` + j.users.map(u=>
+      `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+        <img src="${u.avatar||'/images/logo.jpg'}" onerror="this.onerror=null;this.src='/images/logo.jpg'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #eee;"/>
+        <div style="flex:1;">
+          <div style="font-weight:600;">${u.display_name||u.username}</div>
+          <div style="color:#6b7280;font-size:12px;">@${u.username}</div>
+          ${u.bio?`<div style="color:#374151;font-size:13px;margin-top:4px;">${u.bio}</div>`:''}
+        </div>
+        <a href="javascript:void(0)" class="user-link" data-user-id="${u.id}">查看</a>
+      </div>`
+    ).join('');
+  }
+  if (j.posts && j.posts.length){
+    pr.innerHTML = `<h4>Posts</h4>` + j.posts.map(p=>
+      `<div class="post-card" style="margin:10px 0;">
+        <div class="post-header">
+          <span class="post-author"><a href="javascript:void(0)" class="user-link" data-user-id="">@${p.username}</a></span>
+          <span class="post-topic">in ${p.topic_name||''}</span>
+          <span class="post-time">${new Date(p.created_at).toLocaleDateString()}</span>
+        </div>
+        <div class="post-content"><p>${p.content||''}</p></div>
+      </div>`
+    ).join('');
+  }
+}
+
+document.getElementById('do-search').addEventListener('click', runSearch);
+['q','type'].forEach(id=>document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter'){ runSearch(); }}));
+</script>
+<script src="/js/main.js"></script>
+<!-- 复用用户卡片浮层 -->
+<div id="user-card" class="user-card">
+  <div class="user-card-header">
+    <img id="uc-avatar" class="user-card-avatar" src="/images/logo.jpg" alt="avatar" />
+    <div>
+      <div id="uc-display" class="user-card-name">用户名</div>
+      <div id="uc-username" class="user-card-username">@username</div>
+    </div>
+  </div>
+  <div id="uc-bio" class="user-card-bio"></div>
+  <div class="user-card-stats">
+    <div><span id="uc-followers">0</span> 粉丝</div>
+    <div><span id="uc-following">0</span> 关注</div>
+  </div>
+  <div class="user-card-actions">
+    <button id="uc-follow-btn" class="btn-follow">关注</button>
+  </div>
+ </div>
+</body>
+</html>

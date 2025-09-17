@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NTU NEST - History</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="container">
+  <!-- 左栏 -->
+  <div class="sidebar-left">
+    <div class="logo-section">
+      <img src="/images/logo.jpg" class="nav-logo">
+      <h2>NTU NEST</h2>
+    </div>
+    <ul class="nav">
+      <li><a href="/home"><i class="fa fa-home"></i> Home</a></li>
+      <li><a href="/topics"><i class="fa fa-hashtag"></i> Topics</a></li>
+      <li><a href="/notifications"><i class="fa fa-bell"></i> Notifications</a></li>
+      <li><a href="/messages"><i class="fa fa-envelope"></i> Messages</a></li>
+      <li><a href="/profile"><i class="fa fa-user"></i> Profile</a></li>
+      <li class="active"><i class="fa fa-clock-rotate-left"></i> History</li>
+    </ul>
+  </div>
+
+  <!-- 中栏 -->
+  <div class="main">
+    <h3 class="section-title">Your History</h3>
+    <div class="timeline-list">
+      <% if (timeline && timeline.length > 0) { %>
+        <% timeline.forEach(item => { %>
+          <div class="timeline-item">
+            <% if (item.type === 'post') { %>
+              <i class="fa fa-pen"></i>
+              <span>你发布了一条新帖</span>
+              <div class="timeline-extra"><%= item.extra || '' %></div>
+            <% } else if (item.type === 'like') { %>
+              <i class="fa fa-heart"></i>
+              <span>你点赞了一条帖子 (ID: <%= item.ref_id %>)</span>
+            <% } else if (item.type === 'comment') { %>
+              <i class="fa fa-comment"></i>
+              <span>你评论了帖子 (ID: <%= item.ref_id %>)</span>
+              <div class="timeline-extra"><%= item.extra || '' %></div>
+            <% } else if (item.type === 'share') { %>
+              <i class="fa fa-share"></i>
+              <span>你分享了一条帖子 (ID: <%= item.ref_id %>)</span>
+            <% } else if (item.type === 'follow') { %>
+              <i class="fa fa-user-plus"></i>
+              <span>你关注了 @<%= item.extra %> <%= item.extra2 ? '('+item.extra2+')' : '' %></span>
+            <% } %>
+            <span class="timeline-time"><%= item.created_at.toLocaleString() %></span>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="no-posts"><p>暂无历史记录</p></div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- 右栏 -->
+  <div class="sidebar-right">
+    <div class="info-card">
+      <h3>Tips</h3>
+      <p>你可以在这里查看最近的操作记录。</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

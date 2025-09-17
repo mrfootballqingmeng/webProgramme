@@ -16,12 +16,18 @@
       <h2>NTU NEST</h2>
     </div>
     <ul class="nav">
-      <li class="active"><i class="fa fa-home"></i> Home</li>
+  <li class="active"><i class="fa fa-home"></i> Home</li>
       <li><a href="/topics"><i class="fa fa-hashtag"></i> Topics</a></li>
-      <li><i class="fa fa-bell"></i> Notifications</li>
+    <li><a href="/my-follows"><i class="fa fa-user-check"></i> My Follow</a></li>
+  <li><a href="/notifications"><i class="fa fa-bell"></i> Notifications</a></li>
       <li><a href="/messages"><i class="fa fa-envelope"></i> Messages</a></li>
       <li><a href="/profile"><i class="fa fa-user"></i> Profile</a></li>
+      <li><a href="/history"><i class="fa fa-clock-rotate-left"></i> History</a></li>
     </ul>
+    <!-- 草稿箱入口按钮（点击后在右侧显示草稿） -->
+    <button id="open-drafts" class="post-btn" style="width:100%; margin-top:10px; background:linear-gradient(135deg,#6b7280,#4b5563);">
+      <i class="fa fa-file-lines"></i> 草稿箱
+    </button>
      <!-- 发帖表单 (多图) -->
      <div class="post-form-section">
       <h4>发布新帖</h4>
@@ -42,15 +48,19 @@
         <button type="button" id="draft-save-btn" style="margin-left:8px;" class="post-btn">保存草稿</button>
         <input type="hidden" id="current-draft-id" value="">
       </form>
-        <div class="drafts-box" style="margin-top:16px;">
-          <h5 style="margin:8px 0;">草稿箱</h5>
-          <div id="draft-list" style="display:flex;flex-direction:column;gap:6px;font-size:14px;color:#333;"></div>
-        </div>
     </div>
   </div>
 
   <!-- 中栏 -->
   <div class="main">
+    <!-- 中栏草稿箱（默认隐藏，仅草稿视图使用） -->
+    <div id="drafts-main-card" style="display:none; margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h4 style="margin:0;">草稿箱</h4>
+        <button id="back-to-posts" class="post-btn" style="background:linear-gradient(135deg,#6b7280,#4b5563);">返回帖子</button>
+      </div>
+      <div id="drafts-cards" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
       <h3 class="section-title" style="margin:0;">Recent Posts</h3>
       <div style="display:flex;align-items:center;gap:5px;">
@@ -62,12 +72,14 @@
         <input type="text" id="post-search" placeholder="Search posts..." style="padding:5px;border:1px solid #ddd;border-radius:3px;font-size:14px;">
       </div>
     </div>
-    <div class="posts-feed">
+  <div class="posts-feed" id="posts-feed">
       <% if (posts && posts.length > 0) { %>
         <% posts.forEach(post => { %>
           <div class="post-card">
             <div class="post-header">
-              <span class="post-author">@<%= post.username %></span>
+              <span class="post-author">
+                <a href="javascript:void(0)" class="user-link" data-user-id="<%= post.user_id %>">@<%= post.username %></a>
+              </span>
               <span class="post-topic">in <%= post.topic_name %></span>
               <span class="post-time"><%= new Date(post.created_at).toLocaleDateString() %></span>
             </div>
@@ -113,6 +125,34 @@
 
   <!-- 右栏 -->
   <div class="sidebar-right">
+    <div class="info-card" id="card-calendar">
+      <h3 class="card-header-row" style="display:flex;align-items:center;justify-content:space-between;margin:0;">
+        <span>Calendar</span>
+        <button id="toggle-calendar" class="collapse-btn" aria-expanded="true" title="折叠/展开" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;cursor:pointer;">
+          <i class="fa fa-chevron-up"></i>
+        </button>
+      </h3>
+      <div id="calendar-body" class="calendar-form" style="display:flex;flex-direction:column;gap:8px;">
+        <input id="cal-title" placeholder="事件/课程标题" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
+        <input id="cal-start" type="datetime-local" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
+        <input id="cal-end" type="datetime-local" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
+        <input id="cal-location" placeholder="地点(可选)" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;">
+        <textarea id="cal-notes" placeholder="备注(可选)" style="padding:6px 8px;border:1px solid #ddd;border-radius:8px;min-height:60px;"></textarea>
+        <label style="font-size:12px;color:#666;">提醒（分钟前）：
+          <input id="cal-remind" type="number" min="0" step="5" value="60" style="width:80px;margin-left:6px;">
+        </label>
+        <button id="cal-add" class="post-btn">添加事件</button>
+      </div>
+    </div>
+    <div class="info-card" id="card-upcoming">
+      <h3 class="card-header-row" style="display:flex;align-items:center;justify-content:space-between;margin:0;">
+        <span>Upcoming</span>
+        <button id="toggle-upcoming" class="collapse-btn" aria-expanded="true" title="折叠/展开" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;cursor:pointer;">
+          <i class="fa fa-chevron-up"></i>
+        </button>
+      </h3>
+      <div id="upcoming-body" class="calendar-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
     <div class="info-card">
       <h3>Today's Weather</h3>
       <div id="weather">Loading...</div>
@@ -189,5 +229,23 @@ function performSearch() {
 document.getElementById('post-search').addEventListener('input', performSearch);
 document.getElementById('search-type').addEventListener('change', performSearch);
 </script>
+<!-- 用户卡片全局容器：复用同一个浮层（中文注释） -->
+<div id="user-card" class="user-card">
+  <div class="user-card-header">
+    <img id="uc-avatar" class="user-card-avatar" src="/images/logo.jpg" alt="avatar" />
+    <div>
+      <div id="uc-display" class="user-card-name">用户名</div>
+      <div id="uc-username" class="user-card-username">@username</div>
+    </div>
+  </div>
+  <div id="uc-bio" class="user-card-bio"></div>
+  <div class="user-card-stats">
+    <div><span id="uc-followers">0</span> 粉丝</div>
+    <div><span id="uc-following">0</span> 关注</div>
+  </div>
+  <div class="user-card-actions">
+    <button id="uc-follow-btn" class="btn-follow">关注</button>
+  </div>
+ </div>
 </body>
 </html>

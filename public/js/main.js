@@ -76,6 +76,101 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
   }
 
+  // ===== Calendar (右侧) =====
+  const calList = document.getElementById('cal-list') || document.getElementById('upcoming-body');
+  const btnAdd = document.getElementById('cal-add');
+  async function loadEvents(){
+    if (!calList) return;
+    try{
+      const r = await fetch('/api/events');
+      if (!r.ok) { calList.innerHTML = '<div style="color:#999;">请先登录以查看日程</div>'; return; }
+      const j = await r.json();
+      const items = (j.events||[]).map(ev => {
+        const when = new Date(ev.start_time).toLocaleString();
+        const title = ev.title || '(无标题)';
+        const loc = ev.location ? ` @ ${ev.location}` : '';
+        return `<div class="cal-item" data-id="${ev.id}" style="display:flex;gap:8px;align-items:center;border:1px solid #eee;border-radius:8px;padding:8px;">
+          <div style="flex:1;">
+            <div style="font-weight:600;">${title}${loc}</div>
+            <div style="color:#6b7280;font-size:12px;">${when}</div>
+          </div>
+          <button class="btn-del-event" data-id="${ev.id}" style="background:#fff;border:1px solid #e5e7eb;color:#dc3545;border-radius:8px;padding:4px 8px;">删除</button>
+        </div>`;
+      }).join('');
+      calList.innerHTML = items || '<div style="color:#999;">未来30天暂无事件</div>';
+    }catch(e){ calList.innerHTML = '<div style="color:#999;">加载失败</div>'; }
+  }
+  if (calList) loadEvents();
+  if (calList){
+    calList.addEventListener('click', async (e)=>{
+      const btn = e.target.closest('.btn-del-event');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      if (!confirm('确定删除该事件？')) return;
+      try{ const r = await fetch('/api/events/'+id, { method:'DELETE' }); if (r.ok) loadEvents(); } catch(_){ }
+    });
+  }
+  if (btnAdd){
+    btnAdd.addEventListener('click', async ()=>{
+      const title = document.getElementById('cal-title').value.trim();
+      const start = document.getElementById('cal-start').value;
+      const end = document.getElementById('cal-end').value;
+      const location = document.getElementById('cal-location').value.trim();
+      const notes = document.getElementById('cal-notes').value.trim();
+      const remind = document.getElementById('cal-remind').value;
+      if (!title || !start){ alert('请填写标题与开始时间'); return; }
+      try{
+        const r = await fetch('/api/events', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ title, start_time:start, end_time:end||null, location, notes, remind_minutes: remind }) });
+        const j = await r.json();
+        if (r.ok){
+          // 清空表单并刷新
+          ['cal-title','cal-start','cal-end','cal-location','cal-notes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+          loadEvents();
+        } else { alert(j.error||'添加失败'); }
+      }catch(e){ alert('添加失败'); }
+    });
+  }
+
+  // 打开中间草稿箱卡片
+  const openDraftsBtn = document.getElementById('open-drafts');
+  if (openDraftsBtn){
+    openDraftsBtn.addEventListener('click', ()=>{
+      showDraftsView();
+    });
+  }
+
+  // 返回帖子视图
+  const backToPostsBtn = document.getElementById('back-to-posts');
+  if (backToPostsBtn){
+    backToPostsBtn.addEventListener('click', ()=>{
+      showPostsView();
+    });
+  }
+
+  // ===== Collapsible: Calendar & Upcoming =====
+  function setupCollapse(toggleId, bodyId, storageKey, expandedDisplay){
+    const btn = document.getElementById(toggleId);
+    const body = document.getElementById(bodyId);
+    if (!btn || !body) return;
+    const icon = btn.querySelector('i');
+    const saved = localStorage.getItem(storageKey);
+    if (saved === 'collapsed'){
+      body.style.display = 'none';
+      btn.setAttribute('aria-expanded','false');
+      if (icon) icon.className = 'fa fa-chevron-down';
+    } else if (expandedDisplay) {
+      body.style.display = expandedDisplay;
+    }
+    btn.addEventListener('click', ()=>{
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? (expandedDisplay || '') : 'none';
+      btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+      if (icon) icon.className = isHidden ? 'fa fa-chevron-up' : 'fa fa-chevron-down';
+      localStorage.setItem(storageKey, isHidden ? 'expanded' : 'collapsed');
+    });
+  }
+  setupCollapse('toggle-calendar', 'calendar-body', 'card.calendar', 'flex');
+  setupCollapse('toggle-upcoming', 'upcoming-body', 'card.upcoming', 'flex');
   // 点赞 / 分享 / 评论交互 (home 模板更新后会有对应按钮 class)
   function bindInteractions(){
     document.querySelectorAll('.btn-like').forEach(btn=>{
@@ -155,21 +250,202 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
   bindInteractions();
 
+  // ===== 用户卡片交互（中文注释） =====
+  const userCard = document.getElementById('user-card');
+  const elAvatar = document.getElementById('uc-avatar');
+  const elDisplay = document.getElementById('uc-display');
+  const elUsername = document.getElementById('uc-username');
+  const elBio = document.getElementById('uc-bio');
+  const elFollowers = document.getElementById('uc-followers');
+  const elFollowing = document.getElementById('uc-following');
+  const elFollowBtn = document.getElementById('uc-follow-btn');
+
+  let currentHoverUserId = null;
+  let isFollowing = false;
+  let isSelf = false;
+
+  // 中文注释：将卡片定位为“固定在被点击用户名附近”，不再跟随鼠标
+  function positionCardAtAnchor(anchorEl){
+    if (!userCard || !anchorEl) return;
+    const rect = anchorEl.getBoundingClientRect();
+    const pageX = rect.left + window.scrollX;
+    const pageYBottom = rect.bottom + window.scrollY;
+    const margin = 8; // 与锚点的间距
+    const cardWidth = 280; // 与 CSS 中宽度一致
+
+    // 先显示以便读取高度
+    userCard.style.display = 'block';
+    const cardHeight = userCard.offsetHeight || 180;
+
+    // 默认放在元素下方，若空间不足则放在上方
+    let top = pageYBottom + margin;
+    if (top + cardHeight > window.innerHeight + window.scrollY) {
+      top = rect.top + window.scrollY - cardHeight - margin;
+    }
+
+    let left = pageX;
+    if (left + cardWidth > window.innerWidth + window.scrollX) {
+      left = Math.max(8, window.innerWidth + window.scrollX - cardWidth - 8);
+    }
+
+    userCard.style.left = left + 'px';
+    userCard.style.top = top + 'px';
+  }
+
+  async function loadUserSummary(userId){
+    try{
+      const res = await fetch('/api/users/'+userId+'/summary');
+      if (!res.ok) throw new Error('load summary failed');
+      const j = await res.json();
+      const p = j.profile || {};
+      elAvatar.src = p.avatar || '/images/logo.jpg';
+      elDisplay.textContent = p.display_name || p.username || '用户';
+      elUsername.textContent = '@' + (p.username || 'unknown');
+      elBio.textContent = p.bio || '这个人很神秘，什么也没留下';
+      elFollowers.textContent = j.followers || 0;
+      elFollowing.textContent = j.following || 0;
+      isFollowing = !!j.isFollowing;
+      isSelf = !!j.isSelf;
+      updateFollowBtn();
+    }catch(e){ console.warn(e); }
+  }
+
+  function updateFollowBtn(){
+    if (!elFollowBtn) return;
+    if (isSelf){
+      elFollowBtn.style.display = 'none';
+      return;
+    }
+    elFollowBtn.style.display = '';
+    if (isFollowing){
+      elFollowBtn.textContent = '已关注';
+      elFollowBtn.classList.remove('btn-follow');
+      elFollowBtn.classList.add('btn-unfollow');
+    } else {
+      elFollowBtn.textContent = '关注';
+      elFollowBtn.classList.add('btn-follow');
+      elFollowBtn.classList.remove('btn-unfollow');
+    }
+  }
+
+  // 事件委托：点击用户名打开卡片
+  document.body.addEventListener('click', async (e)=>{
+    const a = e.target.closest('.user-link');
+    if (!a) return;
+    const uid = a.getAttribute('data-user-id');
+    currentHoverUserId = uid;
+    await loadUserSummary(uid);
+    // 中文注释：固定在被点击用户名附近
+    positionCardAtAnchor(a);
+  });
+
+  // 点击空白处关闭
+  document.addEventListener('click', (e)=>{
+    if (!userCard) return;
+    const onUser = e.target.closest('.user-link');
+    const onCard = e.target.closest('#user-card');
+    if (!onUser && !onCard){ userCard.style.display = 'none'; }
+  });
+
+  // 移除鼠标跟随逻辑：卡片位置固定，不随鼠标移动
+
+  // 关注/取关按钮
+  if (elFollowBtn){
+    elFollowBtn.addEventListener('click', async ()=>{
+      if (!currentHoverUserId) return;
+      try{
+        if (isFollowing){
+          const res = await fetch('/api/users/'+currentHoverUserId+'/follow', { method:'DELETE' });
+          if (!res.ok) throw new Error('unfollow failed');
+          isFollowing = false;
+          // 粉丝数-1（不小于0）
+          const n = Math.max(0, (parseInt(elFollowers.textContent||'0',10) - 1));
+          elFollowers.textContent = n;
+        } else {
+          const res = await fetch('/api/users/'+currentHoverUserId+'/follow', { method:'POST' });
+          if (!res.ok) throw new Error('follow failed');
+          isFollowing = true;
+          elFollowers.textContent = (parseInt(elFollowers.textContent||'0',10) + 1);
+        }
+        updateFollowBtn();
+      }catch(e){
+        alert('操作失败，请先登录或稍后再试');
+        console.warn(e);
+      }
+    });
+  }
+
   // ===== Drafts Logic =====
-  const draftListEl = document.getElementById('draft-list');
+  const draftListEl = document.getElementById('drafts-cards');
   const saveDraftBtn = document.getElementById('draft-save-btn');
   const draftIdInput = document.getElementById('current-draft-id');
   function renderDrafts(drafts){
     if (!draftListEl) return;
     draftListEl.innerHTML = '';
+    if (!drafts || drafts.length === 0){
+      draftListEl.innerHTML = '<div style="color:#999;padding:8px;border:1px dashed #ddd;border-radius:8px;">暂无草稿</div>';
+      return;
+    }
     drafts.forEach(d => {
-      const row = document.createElement('div');
-      row.style.display='flex'; row.style.alignItems='center'; row.style.gap='6px';
-      row.innerHTML = `<span style="flex:1;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${(d.content||'').replace(/"/g,'&quot;')}">${(d.content||'').slice(0,22)||'(空)'}${(d.content||'').length>22?'...':''}</span>`+
-        `<button data-act="edit" data-id="${d.id}" style="padding:2px 6px;">编辑</button>`+
-        `<button data-act="publish" data-id="${d.id}" style="padding:2px 6px;">发布</button>`+
-        `<button data-act="del" data-id="${d.id}" style="padding:2px 6px;color:#a00;">删</button>`;
-      draftListEl.appendChild(row);
+      const card = document.createElement('div');
+      card.className = 'post-card';
+      card.setAttribute('data-id', d.id);
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'post-content';
+      const p = document.createElement('p');
+      p.textContent = d.content || '';
+      contentDiv.appendChild(p);
+
+      if (Array.isArray(d.files) && d.files.length){
+        const imgs = document.createElement('div');
+        imgs.className = 'post-images';
+        imgs.style.display = 'flex';
+        imgs.style.gap = '6px';
+        imgs.style.flexWrap = 'wrap';
+        d.files.forEach(f => {
+          const img = document.createElement('img');
+          img.src = f;
+          img.style.maxWidth = '180px';
+          img.style.maxHeight = '180px';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = '6px';
+          img.onerror = function(){ this.onerror=null; this.src='/images/logo.jpg'; };
+          imgs.appendChild(img);
+        });
+        contentDiv.appendChild(imgs);
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'post-actions';
+      actions.style.marginTop = '8px';
+      actions.style.display = 'flex';
+      actions.style.gap = '10px';
+      actions.style.alignItems = 'center';
+
+      const btnEdit = document.createElement('button');
+      btnEdit.textContent = '编辑';
+      btnEdit.setAttribute('data-act','edit');
+      btnEdit.setAttribute('data-id', d.id);
+
+      const btnPublish = document.createElement('button');
+      btnPublish.textContent = '发布';
+      btnPublish.setAttribute('data-act','publish');
+      btnPublish.setAttribute('data-id', d.id);
+
+      const btnDel = document.createElement('button');
+      btnDel.textContent = '删除';
+      btnDel.style.color = '#a00';
+      btnDel.setAttribute('data-act','del');
+      btnDel.setAttribute('data-id', d.id);
+
+      actions.appendChild(btnEdit);
+      actions.appendChild(btnPublish);
+      actions.appendChild(btnDel);
+
+      card.appendChild(contentDiv);
+      card.appendChild(actions);
+      draftListEl.appendChild(card);
     });
   }
   async function loadDrafts(){
@@ -218,6 +494,43 @@ document.addEventListener('DOMContentLoaded', ()=>{
       else if (act==='publish') publishDraft(id);
       else if (act==='edit') editDraft(id);
     });
+    // 初始不加载，进入草稿视图时加载
+  }
+
+  function findPostsHeaderRow(){
+    const titleEl = document.querySelector('.section-title');
+    return titleEl ? titleEl.parentElement : null;
+  }
+  function showDraftsView(){
+    const mainCard = document.getElementById('drafts-main-card');
+    const postsFeed = document.getElementById('posts-feed');
+    const headerRow = findPostsHeaderRow();
+    if (mainCard) mainCard.style.display = '';
+    if (postsFeed) postsFeed.style.display = 'none';
+    if (headerRow) headerRow.style.display = 'none';
     loadDrafts();
   }
+  function showPostsView(){
+    const mainCard = document.getElementById('drafts-main-card');
+    const postsFeed = document.getElementById('posts-feed');
+    const headerRow = findPostsHeaderRow();
+    if (mainCard) mainCard.style.display = 'none';
+    if (postsFeed) postsFeed.style.display = '';
+    if (headerRow) headerRow.style.display = 'flex';
+  }
 });
+
+// ===== 固定右下角：法律链接（中文注释） =====
+(function(){
+  try{
+    const box = document.createElement('div');
+    box.className = 'legal-links';
+    box.innerHTML = '<div class="legal-title">Contact us</div>'+
+      '<div class="legal-contact">TEL: +65 1 2345678 &nbsp;&nbsp; E-mail: NTU NEST@ntu.com</div>'+
+      '<div class="legal-sep"></div>'+
+      '<a href="/terms" target="_self">Terms of Service</a> · <a href="/privacy" target="_self">Privacy Policy</a> · <a href="/cookies" target="_self">Cookie Policy</a>';
+    document.addEventListener('DOMContentLoaded', ()=>{
+      document.body.appendChild(box);
+    });
+  }catch(e){}
+})();

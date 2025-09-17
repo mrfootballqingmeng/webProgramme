@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NTU NEST - Notifications</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="container">
+  <!-- 左栏 -->
+  <div class="sidebar-left">
+    <div class="logo-section">
+      <img src="/images/logo.jpg" class="nav-logo">
+      <h2>NTU NEST</h2>
+    </div>
+    <ul class="nav">
+      <li><a href="/home"><i class="fa fa-home"></i> Home</a></li>
+      <li><a href="/topics"><i class="fa fa-hashtag"></i> Topics</a></li>
+  <li><a href="/my-follows"><i class="fa fa-user-check"></i> My Follow</a></li>
+      <li class="active"><i class="fa fa-bell"></i> Notifications</li>
+      <li><a href="/messages"><i class="fa fa-envelope"></i> Messages</a></li>
+      <li><a href="/profile"><i class="fa fa-user"></i> Profile</a></li>
+      <li><a href="/history"><i class="fa fa-clock-rotate-left"></i> History</a></li>
+    </ul>
+  </div>
+
+  <!-- 中栏 -->
+  <div class="main">
+    <h3 class="section-title">Notifications</h3>
+    <div class="notifications-list">
+      <% if (notifications && notifications.length > 0) { %>
+        <% notifications.forEach(n => { %>
+          <div class="notification-item <%= n.is_read ? '' : 'unread' %>">
+            <% if (n.type === 'system') { %>
+              <i class="fa fa-info-circle"></i>
+              <span><%= n.content %></span>
+            <% } else if (n.type === 'follow') { %>
+              <i class="fa fa-user-plus"></i>
+              <span>@<%= n.actor_username %> 关注了你</span>
+            <% } else if (n.type === 'post') { %>
+              <i class="fa fa-bullhorn"></i>
+              <span>你关注的 @<%= n.actor_username %> 发布了新帖</span>
+            <% } %>
+            <span class="notif-time"><%= new Date(n.created_at).toLocaleString() %></span>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="no-posts">
+          <p>暂无通知</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- 右栏 -->
+  <div class="sidebar-right">
+    <div class="info-card">
+      <h3>Tips</h3>
+      <p>关注你感兴趣的人，及时收到 TA 的新帖提醒。</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
