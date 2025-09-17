@@ -254,6 +254,46 @@ app.post('/api/posts', upload.array('files'), (req, res) => {
     });
 });
 
+// Get user's own posts API
+app.get('/api/user/posts', (req, res) => {
+    if (!req.session.user) return res.status(401).json({error: 'Login required'});
+    const userId = req.session.user.id;
+    
+    const sql = `SELECT posts.*,
+                        topics.display_name AS topic_name,
+                        (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) AS likes_count,
+                        (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id) AS comments_count,
+                        (SELECT COUNT(*) FROM shares WHERE shares.post_id = posts.id) AS shares_count
+                 FROM posts
+                 LEFT JOIN topics ON posts.topic_id = topics.id
+                 WHERE posts.user_id = ?
+                 ORDER BY posts.created_at DESC
+                 LIMIT 50`;
+    
+    db.query(sql, [userId], (err, rows) => {
+        if (err) return res.status(500).json({error: 'DB error'});
+        
+        const posts = (rows || []).map(p => ({
+            id: p.id,
+            content: p.content,
+            files: p.media_paths ? (() => {
+                try {
+                    return JSON.parse(p.media_paths);
+                } catch (e) {
+                    return p.media_path ? [p.media_path] : [];
+                }
+            })() : (p.media_path ? [p.media_path] : []),
+            createdAt: p.created_at,
+            topic_name: p.topic_name,
+            likes: p.likes_count || 0,
+            comments: p.comments_count || 0,
+            shares: p.shares_count || 0
+        }));
+        
+        res.json({posts});
+    });
+});
+
 // Delete post API
 app.delete('/api/posts/:id', (req, res) => {
     if (!req.session.user) return res.status(401).json({error: 'Login required'});

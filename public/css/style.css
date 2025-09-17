@@ -438,6 +438,123 @@ body {
   transform: translateY(-1px);
 }
 
+/* Profile posts section */
+.profile-posts-section {
+  margin-top: 42px;
+}
+
+.user-posts-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.user-posts-feed::-webkit-scrollbar {
+  width: 6px;
+}
+
+.user-posts-feed::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.user-posts-feed::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.user-posts-feed::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.user-post-card {
+  background: #fdfdfd;
+  border: 1px solid #e3e7ef;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.user-post-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-color: #d6dae2;
+}
+
+.user-post-card .post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.user-post-card .post-topic {
+  color: #2c5aa0;
+  font-weight: 500;
+}
+
+.user-post-card .post-time {
+  color: #999;
+}
+
+.user-post-card .post-content {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.user-post-card .post-content p {
+  margin: 0;
+  color: #333;
+  word-wrap: break-word;
+}
+
+.user-post-card .post-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+.user-post-card .post-stats span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-delete-user-post {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.btn-delete-user-post:hover {
+  background: #fff5f5;
+  color: #c82333;
+  transform: translateY(-1px);
+}
+
+.loading-message, .error-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.error-message {
+  color: #dc3545;
+}
+
 @media (max-width: 880px) {
   .profile-container { margin:24px 16px; padding:28px 22px 36px; }
   .profile-header { gap:20px; }
