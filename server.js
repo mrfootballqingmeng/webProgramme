@@ -38,64 +38,6 @@ db.connect(err => {
     process.exit(1);
   }
   console.log("✅ MySQL connected");
-
-  // 中文注释：应用启动时自动创建关注表，避免环境未初始化导致的错误
-  const createFollowsSql = `
-        CREATE TABLE IF NOT EXISTS follows (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            follower_id INT NOT NULL,
-            followee_id INT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY ux_follow (follower_id, followee_id),
-            FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (followee_id) REFERENCES users(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB`;
-  db.query(createFollowsSql, (fErr) => {
-    if (fErr) console.error('创建 follows 表失败:', fErr.message);
-    else console.log('✅ follows 表就绪');
-  });
-
-  // 中文注释：确保通知表存在
-  const createNotificationsSql = `
-        CREATE TABLE IF NOT EXISTS notifications (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            actor_id INT NULL,
-            post_id INT NULL,
-            type ENUM('system','follow','post') NOT NULL,
-            content VARCHAR(255) NULL,
-            is_read BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL,
-            FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE SET NULL,
-            INDEX idx_user_created (user_id, created_at)
-        ) ENGINE=InnoDB`;
-  db.query(createNotificationsSql, (nErr) => {
-    if (nErr) console.error('创建 notifications 表失败:', nErr.message);
-    else console.log('✅ notifications 表就绪');
-  });
-
-    // 中文注释：确保 events（日历事件）表存在
-    const createEventsSql = `
-                CREATE TABLE IF NOT EXISTS events (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        user_id INT NOT NULL,
-                        title VARCHAR(200) NOT NULL,
-                        start_time DATETIME NOT NULL,
-                        end_time DATETIME NULL,
-                        location VARCHAR(200) NULL,
-                        notes TEXT NULL,
-                        remind_minutes INT DEFAULT 60,
-                        reminded BOOLEAN DEFAULT FALSE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                        INDEX idx_user_start (user_id, start_time)
-                ) ENGINE=InnoDB`;
-    db.query(createEventsSql, (eErr) => {
-        if (eErr) console.error('创建 events 表失败:', eErr.message);
-        else console.log('✅ events 表就绪');
-    });
 });
 
 
